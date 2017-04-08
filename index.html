@@ -1,0 +1,455 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="pragma" content="no-cache">
+<meta http-equiv="no-cache">
+<meta http-equiv="Expires" content="-1">
+<!--meta http-equiv="X-UA-Compatible" content="IE=EmulateIE9"-->
+<meta http-equiv="Cache-Control" content="no-cache">
+<title>Web Console</title>
+<meta name="viewport"
+	content="width=device-width, height=device-height, initial-scale=1, user-scalable=no">
+<link rel="stylesheet" href="css/jquery.mobile-1.3.0.min.css" />
+<style type="text/css">
+.volbtn {
+	margin-left: auto;
+	margin-right: auto;
+	width: 64px;
+	height: 64px;
+	margin-top: 15px;
+	margin-bottom: 15px;
+}
+
+.b1,.b2,.b3,.b4,.b5,.b6,.b7,.b8 {
+	height: 1px;
+	font-size: 1px;
+	overflow: hidden;
+	display: block;
+}
+
+.b1,.b8 {
+	margin: 0 5px;
+}
+
+.b2,.b7 {
+	margin: 0 3px;
+	border-right: 2px solid;
+	border-left: 2px solid;
+}
+
+.b3,.b6 {
+	margin: 0 2px;
+	border-right: 1px solid;
+	border-left: 1px solid;
+}
+
+.b4,.b5 {
+	margin: 0 1px;
+	border-right: 1px solid;
+	border-left: 1px solid;
+	height: 2px;
+}
+
+.b2,.b3,.b4,.b5,.b6,.b7 {
+	border-color: #FFFFF7;
+}
+
+.b1,.b8,#logBgDiv {
+	background: #FFFFF7;
+}
+
+.b2,.b3,.b4,.b5,.b6,.b7 {
+	background: #FFFFF7;
+}
+
+
+</style>
+<script src="js/jquery-1.8.2.min.js"></script>
+<script src="js/jquery.mobile-1.3.0.min.js"></script>
+<script src="script/event.js"></script>
+<script src="script/ajax.js"></script>
+<script src="script/i18n.js"></script>
+<script type="text/javascript">
+
+	var browser = {
+
+		versions : function() {
+			
+			var u = navigator.userAgent;
+			
+			//alert(u);
+
+			return {//
+
+				trident : u.indexOf('Trident') > -1, //IE�ں�
+
+				presto : u.indexOf('Presto') > -1, //opera�ں�
+
+				webKit : u.indexOf('AppleWebKit') > -1, //ƻ��ȸ��ں�
+
+				gecko : u.indexOf('Gecko') > -1 && u.indexOf('KHTML') == -1, //����ں�
+
+				mobile : u.indexOf('Mobi') > -1,
+
+				ios : !!u.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/), //ios�ն�
+
+				android : u.indexOf('Android') > -1 || u.indexOf('Linux') > -1, //android�ն˻���uc�����
+
+				iPhone : u.indexOf('iPhone') > -1 || u.indexOf('Mac') > -1, //�Ƿ�ΪiPhone����QQHD�����
+
+				iPad : u.indexOf('iPad') > -1, //�Ƿ�iPad
+
+				webApp : u.indexOf('Safari') == -1, //�Ƿ�webӦ�ó���û��ͷ����ײ�,
+
+				chrome : u.indexOf('Chrome') != -1,
+
+				mac : u.indexOf('Macintosh') != -1
+			};
+
+		}(),
+
+		language : (navigator.browserLanguage || navigator.language)
+				.toLowerCase()
+
+	};
+
+	var p2pStatus = "";
+
+	$(document).ready(function() {
+		initPage();
+
+		if(browser.versions.iPad){
+			window.onorientationchange = function(){
+				//alert();
+				window.location.href = window.location.href;
+			};
+		}
+
+		sendCommand(CommandStrings.GetP2PStatusInfo, function(req) {
+			var sysLanguage = document.getElementById("forLanguage").innerHTML;
+			if (sysLanguage.length <= 0)
+			{
+				sysLanguage = "en_us";
+			}
+			var result = req.responseText.substring(req.responseText.indexOf(":")+1);
+			var describtion = result.substring(0, result.indexOf(":"));
+			p2pStatus = result.substring(result.indexOf(":")+1);
+			var stResult = "common.p2p.off";
+			if (p2pStatus.match("On")){
+				stResult = "common.p2p.on";
+			}
+			document.getElementById("p2pSetupSpan").innerHTML = describtion;
+			document.getElementById("p2pSetupValue").innerHTML = i18n[sysLanguage][stResult];
+		});
+
+		var pollVol = function(){
+			sendCommand("AudioCommand+GetVolume", function(req){
+				if(!isNaN(parseInt(req.responseText))){
+					$("#welcomePage").page();
+					$("#range").val(parseInt(req.responseText));
+					$("#range").slider("refresh");
+				}
+				setTimeout(pollVol, 500);
+			});
+		};
+		
+		setTimeout(pollVol, 500);
+		
+		var pollMute = function(){
+			sendCommand("AudioCommand+GetMute", function(req){
+				if(req.responseText == "YES\r\n"){
+					document.getElementById("muteLink").muteCmd = "AudioCommand+UnMute";
+					document.getElementById("muteImg").src = "img/volume_off.png";
+				}
+				else{
+					document.getElementById("muteLink").muteCmd = "AudioCommand+Mute";
+					document.getElementById("muteImg").src = "img/volume_on.png";
+				}
+				setTimeout(pollMute, 500);
+			});
+		};
+		
+		setTimeout(pollMute, 500);
+		
+		document.getElementById("volUpLink").onclick = function(){
+			sendCommand("AudioCommand+VolumeUp", function(req){
+				if(!isNaN(parseInt(req.responseText))){
+					$("#welcomePage").page();
+					$("#range").val(parseInt(req.responseText));
+					$("#range").slider("refresh");
+					sendCommand("AudioCommand+UnMute", function(req){
+						if(req.responseText == "OK\r\n"){
+							document.getElementById("muteLink").muteCmd = "AudioCommand+Mute";
+							document.getElementById("muteImg").src = "img/volume_on.png";
+						}
+					});
+				}
+			});
+		};
+		
+		document.getElementById("muteLink").onclick = function(){
+			sendCommand(document.getElementById("muteLink").muteCmd, function(req){
+				if(req.responseText == "OK\r\n"){
+					if(document.getElementById("muteLink").muteCmd == "AudioCommand+Mute"){
+						document.getElementById("muteLink").muteCmd = "AudioCommand+UnMute";
+						document.getElementById("muteImg").src = "img/volume_off.png";
+					}
+					else{
+						document.getElementById("muteLink").muteCmd = "AudioCommand+Mute";
+						document.getElementById("muteImg").src = "img/volume_on.png";
+					}
+				}
+			});
+		};
+		
+		document.getElementById("volDownLink").onclick = function(){
+			sendCommand("AudioCommand+VolumeDown", function(req){
+				if(!isNaN(parseInt(req.responseText))){
+					$("#welcomePage").page();
+					$("#range").val(parseInt(req.responseText));
+					$("#range").slider("refresh");
+					sendCommand("AudioCommand+UnMute", function(req){
+						if(req.responseText == "OK\r\n"){
+							document.getElementById("muteLink").muteCmd = "AudioCommand+Mute";
+							document.getElementById("muteImg").src = "img/volume_on.png";
+						}
+					});
+				}
+			});
+		};
+		
+		document.getElementById("settingsLink").onclick = function(){
+			
+			var params = new Parameters();
+			params.setParameter("command", "queryauth");
+			AjaxSupport.doGet(userUri, params, function(req){
+				var auth = null;
+				eval("auth = " + req.responseText);
+				if(auth.enable == 1){
+					document.onkeydown = function(e) {
+						var ev = document.all ? window.event : e;
+						if (ev.keyCode == 13) {
+							doLogin();
+						}
+					};
+					window.location.href = "#loginPage";
+				}
+				else{
+					if (browser.versions.mobile && !browser.versions.iPad) {
+						window.location.href = "menu.html#phoneSettingsPage";
+					} else {
+						window.location.href = "menu.html";
+					}
+				}
+			});
+		};
+		
+		document.getElementById("loginCommitLink").onclick = function(){
+			doLogin();
+		};
+		
+		document.getElementById("loginCancelLink").onclick = function(){
+			document.onkeydown = null;
+		};
+			
+	});
+	
+	function doLogin(){
+		var sysLanguage = document.getElementById("forLanguage").innerHTML;
+		if( sysLanguage.length <= 0)
+		{
+			sysLanguage = "en_us";
+		}
+		var user = document.getElementById("loginId").value;
+		var pass = document.getElementById("loginPwd").value;
+		
+		if(user == ""){
+			alert(i18n_alert[sysLanguage]["login_user_name.error_no"]);
+			return;
+		}
+		
+		if(pass == ""){
+			alert(i18n_alert[sysLanguage]["login_user_password.error_no"]);
+			return;
+		}
+		
+		var params = new Parameters();
+		params.setParameter("command", "authenticate");
+		params.setParameter("username", user);
+		params.setParameter("password", pass);
+		AjaxSupport.doGet(userUri, params, function(req){
+			if(req.responseText == 1){
+				if (browser.versions.mobile && !browser.versions.iPad) {
+					window.location.href = "menu.html#phoneSettingsPage";
+				} else {
+					window.location.href = "menu.html";
+				}
+			}
+			else{
+				alert(i18n_alert[sysLanguage]["login_user.error"]+"\n"+i18n_alert[sysLanguage]["login_user.error.message"]);
+			}
+		});
+	}
+
+	function SwitchP2PState() {
+		var sysLanguage = document.getElementById("forLanguage").innerHTML;
+		if (sysLanguage.length <= 0)
+		{
+			sysLanguage = "en_us";
+		}
+		CommandSupport.sendCommand("settings", CommandStrings.SetP2PStatus);
+		//showWaiting();
+		setTimeout(function(){
+			alert(i18n_alert[sysLanguage]["system_reboot_alert"]);
+			//hideWaiting();
+		}, 2000);
+	}
+
+	function initPage(){
+		sendCommand(CommandStrings.GetSystemControl, function(req){
+			var pos = req.responseText.indexOf(":");
+			var info = req.responseText.substring(pos+1);
+			var arr = info.split("&&");
+			var langVal = "";
+
+			var prop = arr[0]	// For Language
+			if(prop.indexOf(":") != -1){
+				pos = prop.indexOf(":"); 
+				var value = prop.substring(pos+1);
+				if(value.indexOf("##") == 0){
+					value = value.substring(2, value.length-2);
+					var subArr = value.split("$$");
+					var pos1 = subArr[0].indexOf("<-$");
+					var pos2 = subArr[0].indexOf("->");
+					langVal = subArr[0].substring(pos1+"<-$".length, pos2);
+				}
+			}
+
+			if(langVal != null && langVal != ""){
+				var sysLanguage = "";
+				if(langVal == "[OSD_SCHINESE]"){
+					sysLanguage = "zh_cn";
+				}
+				else if(langVal == "[OSD_ENGLISH]"){
+					sysLanguage = "en_us";
+				}
+				else{
+					sysLanguage = "en_us";
+				}
+
+				document.getElementById("forLanguage").innerHTML = sysLanguage;
+				initI18N(sysLanguage);
+			}
+		});
+	}
+
+</script>
+</head>
+<body>
+	<label style="display: none;" id="forLanguage"></label>
+	<div id="welcomePage" data-role="page" style="background-image: url(img/mainback.jpg); background-repeat: no-repeat;">
+		<div id="welcomeContent" data-role="content" class="content">
+			<div id="welcomeDiv">
+				<div style="width: 80%; max_width:500px; margin-left: auto; margin-right: auto;">
+					<span style="display:inline-block">
+					<label id="p2pSetupSpan">P2P Group Owner Mode Switch</label>:&nbsp;&nbsp;
+					<label id="p2pSetupValue">&nbsp;</label></span>
+					<div>&nbsp;</div>
+					<div style="display:inline-block; text-align:center" lang.key="message.p2p.switch.note">NOTE: Turn it off will change to only can use Miracast to display on screen. Please connect to device with WIFI-DIRECT and turn it to ON to use other functions after finish Miracast.</div>
+				<div style="text-align: center; margin-top: 30px;">
+					<span> <a href="#"
+					style="font-size: 10px;color: #BBBBBB; margin-left:auto; margin-right: auto; width: 150px;"
+					data-role="button" class="ui-btn-inline" data-theme="b" id="p2pSetupSwitchBtn" lang.key="common.switch" lang.child="class=ui-btn-inner;class=ui-btn-text" onclick="SwitchP2PState()">Switch</a> </span>
+				</div>
+				</div>
+				<div style="margin-top: 20px;">
+					<hr>
+				</div>
+				<div style="margin-top: 20px;">
+					<span> 
+					<a id="settingsLink" href="#" title="Settings"
+						style="font-size: 16px;color: #BBBBBB; margin-left:auto; margin-right: auto; width: 250px;"
+						data-role="button" class="ui-btn-block" data-theme="b"
+						data-icon="gear" lang.key="common.settings" lang.child="class=ui-btn-inner;class=ui-btn-text">Settings</a> 
+					</span>
+				</div>
+				<div class="volbtn">
+					<a style="cursor: pointer;" id="volUpLink"><img alt="" src="img/volume_up.png"></a>
+				</div>
+				<div class="volbtn">
+					<a style="cursor: pointer;" id="muteLink"><img id="muteImg" alt="" src="img/volume_on.png"></a>
+				</div>
+				<div class="volbtn">
+					<a style="cursor: pointer;" id="volDownLink"><img alt="" src="img/volume_down.png"></a>
+				</div>
+			</div>
+		</div>
+		<div style="width: 80%; margin-left: auto; margin-right: auto;">
+			<div style="position: absolute; left: 0; right: 0; height: 50px; z-index: 999999;">
+				&nbsp;</div>
+			<div style="z-index: -1;">
+				<input type="range" name="range" id="range" min="0" max="31" value="15" data-highlight="true" step="1" readonly="readonly">
+			</div>
+		</div>
+		<div><span id="infoTest"></span></div>
+	</div>
+	
+	<div id="loginPage" data-role="page"  style="background-image: url(img/mainback.jpg); background-repeat: no-repeat;">
+		<div id="loginContent" data-role="content" class="content">
+
+			<div id="loginDiv" style="width: 280px; margin-left: auto; margin-right: auto; margin-top: 60px;">
+			
+				<!-- b class="b1"></b><b class="b2"></b><b class="b3"></b><b class="b4"></b-->
+				
+				<div id="logBgDiv" style="height: 450px;">
+				
+					<div >
+						<div style="height: 64px; line-height: 64px; float: left;">
+							<img alt="" src="img/info.png">
+						</div>
+						<div style="height: 64px; line-height: 64px; float: left; font-size: 16px;" lang.key="login.message">
+							Welcome
+						</div>
+						<div style="clear: both;"></div>
+					</div>
+					
+					<div style="width: 90%; margin-left: auto; margin-right: auto; margin-top: 60px;">
+						<label for="loginId" lang.key="login.username">
+							ID
+						</label>
+						<input id="loginId">
+					</div>
+					
+					<div style="width: 90%; margin-left: auto; margin-right: auto; margin-top: 20px; margin-bottom: 97px;">
+						<label for="loginPwd" lang.key="login.password">
+							Password
+						</label>
+						<input id="loginPwd" type="password">
+					</div>
+					
+					<div style="text-align: center;">
+						<span> 
+						<a id="loginCancelLink" href="#welcomePage"
+							style="font-size: 10px;color: #222222; margin-left:auto; margin-right: auto; width: 100px; margin-right: 20px;"
+							data-role="button" class="ui-btn-inline" data-theme="d" lang.key="common.cancel"
+							>Cancel</a> 
+						</span>
+					
+						<span> 
+						<a id="loginCommitLink" href="#"
+							style="font-size: 10px;color: #BBBBBB; margin-left:auto; margin-right: auto; width: 100px;"
+							data-role="button" class="ui-btn-inline" data-theme="b" lang.key="common.ok"
+							>OK</a> 
+						</span>
+					</div>
+				
+				</div>
+				
+				<!-- b class="b5"></b><b class="b6"></b><b class="b7"></b><b class="b8"></b -->
+			</div>
+		</div>
+	</div>
+	
+</body>
+</html>

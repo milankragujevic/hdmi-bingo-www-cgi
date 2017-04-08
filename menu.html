@@ -1,0 +1,490 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="pragma" content="no-cache">
+<meta http-equiv="no-cache">
+<meta http-equiv="Expires" content="-1">
+<meta http-equiv="X-UA-Compatible" content="IE=EmulateIE9">
+<meta http-equiv="Cache-Control" content="no-cache">
+<title>HDMI Bingo Console</title>
+<meta name="viewport"
+	content="width=device-width, height=device-height, initial-scale=1, user-scalable=no">
+<link rel="stylesheet" href="css/jquery.mobile-1.3.0.min.css" />
+<style type="text/css">
+.volbtn {
+	margin-left: auto;
+	margin-right: auto;
+	width: 64px;
+	height: 64px;
+	margin-top: 15px;
+	margin-bottom: 15px;
+}
+
+.leftMenu {
+	width: 20%;
+	float: left;
+	min-height: 660px;
+	min-width: 200px;
+}
+
+.rightContent {
+	width: 68%;
+	float: left;
+	min-height: 640px;
+	background-color: #888888;
+	text-align: center;
+	margin-left: 60px;
+	margin-top: 10px;
+	min-width: 600px;
+}
+
+.rightContent iframe {
+	width: 100%;
+	height: 640px;
+	padding: 0;
+	margin: 0;
+}
+
+#padSettingsPage .MenuItem {
+	margin-top: 5px;
+	margin-left: 20px;
+	width: 80%;
+	font-size: 14px;
+	min-width: 180px;
+}
+
+#padSettingsPage .MenuLine {
+	margin-left: 15px;
+	width: 80%;
+	min-width: 180px;
+}
+
+#padSettingsPage .MenuSubItem {
+	margin-left: 25px;
+	min-width: 150px;
+}
+
+#padSettingsPage .MenuSubItem span {
+	line-height: 32px;
+	font-size: 13px;
+	display: inline-block;
+	vertical-align: top;
+	cursor: pointer;
+	font-family: consolas;
+}
+
+#phoneSettingsPage .MenuItem {
+	margin-top: 5px;
+	margin-left: 25px;
+	width: 90%;
+	font-size: 14px;
+	min-width: 160px;
+}
+
+#phoneSettingsPage .MenuLine {
+	margin-left: 15px;
+	width: 90%;
+	min-width: 180px;
+}
+
+#phoneSettingsPage .MenuSubItem {
+	margin-left: 25px;
+	min-width: 150px;
+}
+
+#phoneSettingsPage .MenuSubItem span {
+	line-height: 32px;
+	font-size: 16px;
+	display: inline-block;
+	vertical-align: top;
+	cursor: pointer;
+}
+
+.phoneMenu{
+	width: 90%;
+	margin: auto;
+}
+
+.menuSubItemLink {
+	text-decoration: none;
+}
+
+.menuSubItemLink span{
+	color: white;
+}
+</style>
+<script src="js/jquery-1.8.2.min.js"></script>
+<script src="js/jquery.mobile-1.3.0.min.js"></script>
+<script src="script/event.js"></script>
+<script src="script/ajax.js"></script>
+<script src="script/i18n.js"></script>
+<script type="text/javascript">
+
+	function showWaiting(msg) {
+		$.mobile.hidePageLoadingMsg();
+		$.mobile.loadingMessageTextVisible = true;
+		var sysLanguage = document.getElementById("forLanguage").innerHTML;
+		if (sysLanguage.length <= 0)
+		{
+			sysLanguage = "en_us";
+		}
+		var w = $(window).width();
+		var h = $(window).height();
+		$(".ui-loader").css("margin-left", (w / 2) * (-1) + "px");
+		$(".ui-loader").css("margin-top", (h / 2) * (-1) + "px");
+		$(".ui-loader").css("padding-top", h / 2 + "px");
+		$(".ui-loader").css("width", w + "px");
+		$(".ui-loader").css("height", h + "px");
+		$.mobile.showPageLoadingMsg('a', i18n[sysLanguage]["common.waiting"]);
+	}
+	
+	function waitingMessage(msg){
+		$.mobile.showPageLoadingMsg('a', msg);
+	}
+
+	function hideWaiting() {
+		$.mobile.hidePageLoadingMsg();
+	}
+
+	function getIFrame(id) {
+		return document.getElementById(id).contentDocument
+				|| document.frames[id].document;
+	}
+
+	$(document).ready(function() {
+		initPage();
+
+		if(location.hash == "" || location.hash == "#padSettingsPage"){
+			$("#padSettingsPage .menuSubItemLink").bind("click", function(){
+				showWaiting();
+				//initI18N(location.search.substring(1).split("=")[1]);
+				document.getElementById("contentFrame").contentWindow.init("#" + this.href.split("#")[1]);
+			});
+
+			parent.frames["contentFrame"].document.location = "settings.html#statusPage";
+
+			if(navigator.userAgent.indexOf("iPad") != -1 || navigator.userAgent.indexOf("Android") != -1){
+				//document.getElementById("padSettingsDiv").style.minHeight = $(window).height() > $(window).width() ? $(window).height() : $(window).width() + "px";
+			}
+		}
+
+		if(location.hash == "#phoneSettingsPage"){
+			$("#phoneSettingsPage .menuSubItemLink").bind("click", function(){
+
+			});
+		}
+
+		if(isIPad()){
+			window.onorientationchange = function(){
+				window.location.href = window.location.href;
+			};
+		}
+		
+	});
+
+	function isIPad(){
+
+		var ua = navigator.userAgent;    
+
+		if (ua.indexOf("iPad") > 0) {  
+			return true;  
+		} else {
+			return false;
+		}
+	}
+
+	function isLandscape(){
+		if (isIPad()) {
+			if (Math.abs(window.orientation) == 90) {
+				return true;  
+			} else {
+				return false;
+			}
+		} else {
+			if (Math.abs(window.orientation) != 90) {
+				return true;
+			} else {
+				return false;
+			}
+		}
+	}
+
+	function initPage(){
+		sendCommand(CommandStrings.GetSystemControl, function(req){
+			var pos = req.responseText.indexOf(":");
+			var info = req.responseText.substring(pos+1);
+			var arr = info.split("&&");
+			var langVal = "";
+
+			var prop = arr[0]	// For Language
+			if(prop.indexOf(":") != -1){
+				pos = prop.indexOf(":"); 
+				var value = prop.substring(pos+1);
+				if(value.indexOf("##") == 0){
+					value = value.substring(2, value.length-2);
+					var subArr = value.split("$$");
+					var pos1 = subArr[0].indexOf("<-$");
+					var pos2 = subArr[0].indexOf("->");
+					langVal = subArr[0].substring(pos1+"<-$".length, pos2);
+				}
+			}
+			if(langVal != null && langVal != ""){
+				var sysLanguage = "";
+				if(langVal == "[OSD_SCHINESE]"){
+					sysLanguage = "zh_cn";
+				}
+				else if(langVal == "[OSD_ENGLISH]"){
+					sysLanguage = "en_us";
+				}
+				else{
+					sysLanguage = "en_us";
+				}
+
+				document.getElementById("forLanguage").innerHTML = sysLanguage;
+				initI18N(sysLanguage);
+			}
+		});
+	}
+
+</script>
+</head>
+<body style="background-color: #5B5B5B;">
+	<label style="display: none;" id="forLanguage"></label>
+	<div id="padSettingsPage" data-role="page" style="color: #FFFFFF; " style="background-color: #5B5B5B;">
+		<div id="padSettingsDiv" data-role="content" class="content" style="background-color: #5B5B5B;">
+			<div style="width: 100%">
+				<div style="float: left; line-height: 48px;">
+					<img alt="" src="img/settings.png">
+				</div>
+				<div style="float: left; line-height: 48px; font-size: 22px; margin-left: 10px; font-weight: lighter;" lang.key="common.settings">
+					Settings
+				</div>
+				<div style="clear: both"></div>
+			</div>
+			<div>
+				<hr color="#63B8FF" style="margin: 0; padding: 0;">
+			</div>
+			<div>
+				<div class="leftMenu">
+					<div class="MenuItem" lang.key="title.network">
+						Network
+					</div>
+					<div class="MenuLine">
+						<hr>
+					</div>
+					<div class="MenuSubItem">
+						<a class="menuSubItemLink" href="settings.html#wifiSetupPage"
+							target="contentFrame"> <span><img
+								src="img/menu/wifi.png">
+						</span> <span> <span lang.key="network.wlansetup">WiFi Setup</span> </span> </a>
+					</div>
+					<div class="MenuSubItem">
+						<a class="menuSubItemLink" href="settings.html#apSetupPage"
+							target="contentFrame"> <span><img
+								src="img/menu/ap.png">
+						</span> <span> <span lang.key="network.virtualap">Virtual AP</span> </span> </a>
+					</div>
+					<div class="MenuItem" lang.key="title.system">
+						System
+					</div>
+					<div class="MenuLine">
+						<hr>
+					</div>
+					<div class="MenuSubItem">
+						<a class="menuSubItemLink" href="settings.html#systemInfoPage"
+							target="contentFrame"> <span><img
+								src="img/menu/info.png">
+						</span> <span> <span lang.key="common.system">System</span> </span> </a>
+					</div>
+					<div class="MenuSubItem">
+						<a class="menuSubItemLink" href="settings.html#restoreDefaultPage"
+							target="contentFrame"> <span><img
+								src="img/menu/undo.png">
+						</span> <span> <span lang.key="common.factorydefault">Factory Default</span> </span> </a>
+					</div>
+					<div class="MenuSubItem">
+						<a class="menuSubItemLink" href="settings.html#uploadUpgradePage"
+							target="contentFrame"> <span><img
+								src="img/menu/up.png">
+						</span> <span> <span lang.key="status.upgrade">Firmware Upgrade</span> </span> </a>
+					</div>
+					<div class="MenuSubItem" style="display: none;">
+						<a class="menuSubItemLink" href="settings.html#authSettingsPage"
+							target="contentFrame"> <span><img
+								src="img/menu/config.png">
+						</span> <span> <span lang.key="common.authentication">Authentication</span> </span> </a>
+					</div>
+					<div class="MenuItem" lang.key="title.video">
+						Video
+					</div>
+					<div class="MenuLine">
+						<hr>
+					</div>
+					<div class="MenuSubItem">
+						<a class="menuSubItemLink" href="settings.html#videoSetupPage"
+							target="contentFrame"> <span><img
+								src="img/menu/play.png">
+						</span> <span> <span lang.key="common.video">Video</span> </span> </a>
+					</div>
+					<div class="MenuItem" style="display: none;" lang.key="title.audio">
+						Audio
+					</div>
+					<div class="MenuLine" style="display: none;">
+						<hr>
+					</div>
+					<div class="MenuSubItem" style="display: none;">
+						<a class="menuSubItemLink" href="settings.html#audioSetupPage"
+							target="contentFrame"> <span><img
+								src="img/menu/music.png">
+						</span> <span> <span lang.key="common.audio">Audio</span> </span> </a>
+					</div>
+					<div class="MenuItem" lang.key="title.status">
+						Status
+					</div>
+					<div class="MenuLine">
+						<hr>
+					</div>
+					<div class="MenuSubItem">
+						<a id="statusPageLink" class="menuSubItemLink"
+							href="settings.html#statusPage" target="contentFrame"> <span><img
+								src="img/menu/star.png">
+						</span> <span> <span lang.key="common.status">Status</span> </span> </a>
+					</div>
+				</div>
+				<div class="rightContent" style="background-color: #5B5B5B;">
+					<div>
+						<iframe id="contentFrame" name="contentFrame" scrolling="auto" marginwidth="0" marginheight="0" allowtransparency="yes">
+						</iframe>
+					</div>
+				</div>
+				<div style="clear: both"></div>
+			</div>
+		</div>
+	</div>
+	
+	<div id="phoneSettingsPage" data-role="page"  style="color: #FFFFFF;">
+		<div class="content" style="background-color: #5B5B5B;">
+			<div>
+				<div>
+					<div style="float: left; line-height: 48px;">
+						<img alt="" src="img/settings.png">
+					</div>
+					<div style="float: left; line-height: 48px; font-size: 22px; margin-left: 10px; font-weight: lighter;"  lang.key="common.settings">
+						Settings</div>
+					<div style="clear: both"></div>
+				</div>
+				<div>
+					<hr color="#63B8FF" style="margin: 0; padding: 0;">
+				</div>
+			</div>
+			<div>
+				<div class="phoneMenu">
+					<div class="MenuItem" lang.key="title.network">
+						Network
+					</div>
+					<div class="MenuLine">
+						<hr>
+					</div>
+					<div class="MenuSubItem">
+						<span><img src="img/menu/wifi.png"></span>
+						<span>
+							<a class="menuSubItemLink" href="settings.html#waitingPage?page=wifiSetupPage" target="_self">
+								<span lang.key="network.wlansetup">WiFi Setup</span>
+							</a>
+						</span>
+					</div>
+					<div class="MenuSubItem">
+						<span><img src="img/menu/ap.png"></span>
+						<span>
+							<a class="menuSubItemLink" href="settings.html#waitingPage?page=apSetupPage" target="_self">
+								<span lang.key="network.virtualap">Virtual AP</span>
+							</a>
+						</span>
+					</div>
+					<div class="MenuItem" lang.key="title.system">
+						System
+					</div>
+					<div class="MenuLine">
+						<hr>
+					</div>
+					<div class="MenuSubItem">
+						<span><img src="img/menu/info.png"></span>
+						<span>
+							<a class="menuSubItemLink" href="settings.html#waitingPage?page=systemInfoPage" target="_self">
+								<span lang.key="common.system">System</span>
+							</a>
+						</span>
+					</div>
+					<div class="MenuSubItem">
+						<span><img src="img/menu/undo.png"></span>
+						<span>
+							<a class="menuSubItemLink" href="settings.html#waitingPage?page=restoreDefaultPage" target="_self">
+								<span lang.key="common.factorydefault">Factory Default</span>
+							</a>
+						</span>
+					</div>
+					<div class="MenuSubItem">
+						<span><img src="img/menu/up.png"></span>
+						<span>
+							<a class="menuSubItemLink" href="settings.html#waitingPage?page=uploadUpgradePage" target="_self">
+								<span lang.key="status.upgrade">Firmware Upgrade</span>
+							</a>
+						</span>
+					</div>
+					<div class="MenuSubItem" style="display: none;">
+						<span><img src="img/menu/config.png"></span>
+						<span>
+							<a class="menuSubItemLink" href="settings.html#waitingPage?page=authSettingsPage" target="_self">
+								<span lang.key="common.authentication">Authentication</span>
+							</a>
+						</span>
+					</div>
+					<div class="MenuItem" lang.key="title.video">
+						Video
+					</div>
+					<div class="MenuLine">
+						<hr>
+					</div>
+					<div class="MenuSubItem">
+						<span><img src="img/menu/play.png"></span>
+						<span>
+							<a class="menuSubItemLink" href="settings.html#waitingPage?page=videoSetupPage" target="_self">
+								<span lang.key="common.video">Video</span>
+							</a>
+						</span>
+					</div>
+					<div class="MenuItem" style="display: none;" lang.key="title.audio">
+						Audio
+					</div>
+					<div class="MenuLine" style="display: none;">
+						<hr>
+					</div>
+					<div class="MenuSubItem" style="display: none;">
+						<span><img src="img/menu/music.png"></span>
+						<span>
+							<a class="menuSubItemLink" href="settings.html#waitingPage?page=audioSetupPage" target="_self">
+								<span lang.key="common.audio">Audio</span>
+							</a>
+						</span>
+					</div>
+					<div class="MenuItem" lang.key="title.status">
+						Status
+					</div>
+					<div class="MenuLine">
+						<hr>
+					</div>
+					<div class="MenuSubItem">
+						<span><img src="img/menu/star.png"></span>
+						<span>
+							<a class="menuSubItemLink" href="settings.html#waitingPage?page=statusPage" target="_self">
+								<span lang.key="common.status">Status</span>
+							</a>
+						</span>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</body>
+</html>

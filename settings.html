@@ -1,0 +1,1631 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="pragma" content="no-cache">
+<meta http-equiv="no-cache">
+<meta http-equiv="Expires" content="-1">
+<meta http-equiv="X-UA-Compatible" content="IE=EmulateIE9">
+<meta http-equiv="Cache-Control" content="no-cache">
+<title>HDMI Bingo Console</title>
+<meta name="viewport"
+	content="width=device-width, height=device-height, initial-scale=1, user-scalable=no">
+<link rel="stylesheet" href="css/jquery.mobile-1.3.0.min.css" />
+<style type="text/css">
+
+.wifiSetupItemWrapper {
+	width: 90%;
+	min-width: 250px;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.wifiSetupItem {
+	
+}
+
+.wifiSetupItem span {
+	line-height: 37px;
+	font-size: 18px;
+	display: inline-block;
+	vertical-align: top;
+}
+
+.wifiSetupItem a:link {text-decoration: none;color: #FFFFFF}    
+.wifiSetupItem a:visited {text-decoration: none;color: #FFFFFF} 
+.wifiSetupItem a:hover {text-decoration: none;color: #FFFFFF}   
+.wifiSetupItem a:active {text-decoration: none;color: #FFFFFF}  
+
+.wifiSetupItem .wifiAPName {
+	color: #FFFFFF;
+	font-weight: bold;
+	float: left;
+}
+
+.wifiSetupItem .wifiAPImg {
+	background-image: url(img/content/wifilist.png);
+	background-position: 45px 0;
+	width: 45px;
+	float: right;
+}
+
+.wifiSetupLine {
+	width: 95%;
+	min-width: 300px;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.statusTitle {
+	display: block;
+	width: 40%;
+	float: left;
+}
+
+.statusValue {
+	text-align: center;
+	display: block;
+	width: 60%;
+	float: left;
+}
+</style>
+<script src="js/jquery-1.8.2.min.js"></script>
+<script src="js/jquery.mobile-1.3.0.min.js"></script>
+<script src="script/event.js"></script>
+<script src="script/ajax.js"></script>
+<script src="script/i18n.js"></script>
+<script type="text/javascript">
+
+	var browser = {
+
+		versions : function() {
+			
+			var u = navigator.userAgent;
+			
+			//alert(u);
+
+			return {//
+
+				trident : u.indexOf('Trident') > -1, //IE�ں�
+
+				presto : u.indexOf('Presto') > -1, //opera�ں�
+
+				webKit : u.indexOf('AppleWebKit') > -1, //ƻ��ȸ��ں�
+
+				gecko : u.indexOf('Gecko') > -1 && u.indexOf('KHTML') == -1, //����ں�
+
+				mobile : u.indexOf('Mobi') > -1,
+
+				ios : !!u.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/), //ios�ն�
+
+				android : u.indexOf('Android') > -1 || u.indexOf('Linux') > -1, //android�ն˻���uc�����
+
+				iPhone : u.indexOf('iPhone') > -1 || u.indexOf('Mac') > -1, //�Ƿ�ΪiPhone����QQHD�����
+
+				iPad : u.indexOf('iPad') > -1, //�Ƿ�iPad
+
+				webApp : u.indexOf('Safari') == -1, //�Ƿ�webӦ�ó���û��ͷ����ײ�,
+
+				chrome : u.indexOf('Chrome') != -1,
+
+				mac : u.indexOf('Macintosh') != -1
+			};
+
+		}(),
+
+		language : (navigator.browserLanguage || navigator.language)
+				.toLowerCase()
+
+	};
+
+	var p2pStatus = "";
+	var videoProtectStatus = "";
+
+	function onPageLoaded(eventSrc, hashObj){
+		if(eventSrc == null)
+			return;
+		if(hashObj.flag == null){
+			EventMgr.addListener(EventObjectSupport.SystemInfoFetched, new EventListener(eventSrc, systemStatusFetchedListener));
+			EventMgr.addListener(EventObjectSupport.SystemInfoFetched, new EventListener(eventSrc, eventFetchedListener));
+			EventMgr.addListener(EventObjectSupport.NetworkInfoFetched, new EventListener(eventSrc, eventFetchedListener));
+			EventMgr.addListener(EventObjectSupport.FirmwareInfoFetched, new EventListener(eventSrc, eventFetchedListener));
+			EventMgr.addListener(EventObjectSupport.VideoProtectInfoFetched, new EventListener(eventSrc, eventFetchedListener));
+			EventMgr.addListener(EventObjectSupport.HDCPKeyInfoFetched, new EventListener(eventSrc, eventFetchedListener));
+			EventMgr.addListener(EventObjectSupport.P2PStatusInfoFetched, new EventListener(eventSrc, eventFetchedListener));
+			EventMgr.addListener(EventObjectSupport.VideoInfoFetched, new EventListener(eventSrc, eventFetchedListener));
+			EventMgr.addListener(EventObjectSupport.AudioInfoFetched, new EventListener(eventSrc, eventFetchedListener));
+			EventMgr.addListener(EventObjectSupport.VirtualAPFetched, new EventListener(eventSrc, eventFetchedListener));
+			EventMgr.addListener(EventObjectSupport.WlanConnInfoFetched, new EventListener(eventSrc, eventFetchedListener));
+			EventMgr.addListener(EventObjectSupport.FirmVersionInfoFetched, new EventListener(eventSrc,eventFetchedListener));
+			hashObj.flag = new Object;
+		}
+		
+		sendAllCommand(eventSrc);
+		waitAllEvents(eventSrc, function(){
+			var callback = function(auth){
+				var lang = i18n[window.langindex];
+				if(lang == null){
+					setTimeout(function(){callback(auth);}, 500);
+				}else{
+					document.getElementById("passwordProtectValue").innerHTML = lang[i18nAbledKeyArr[auth.enable]];
+					document.getElementById("passwordProtectValue")["lang.key"] = i18nAbledKeyArr[auth.enable];
+				}
+			};
+			fetchAuthInfo(callback);
+			var sysLanguage = document.getElementById("forLanguage").innerHTML;
+			if (sysLanguage.length <= 0)
+			{
+				sysLanguage = "en_us";
+			}
+
+			var value = document.getElementById("videoProtectInfoValue").innerHTML;
+			if (value.match("On"))
+			{
+				document.getElementById("videoProtectInfoValue").innerHTML = i18n[sysLanguage]["common.on"];
+			}
+			else
+			{
+				document.getElementById("videoProtectInfoValue").innerHTML = i18n[sysLanguage]["common.off"];
+			}
+			value = document.getElementById("p2pStatusValue").innerHTML;
+			if (value.match("On"))
+			{
+				document.getElementById("p2pStatusValue").innerHTML = i18n[sysLanguage]["common.on"];
+			}
+			else
+			{
+				document.getElementById("p2pStatusValue").innerHTML = i18n[sysLanguage]["common.off"];
+			}
+		});
+	}
+	
+	function sendAllCommand(eventSrc){
+		
+		CommandSupport.sendCommand(eventSrc, CommandStrings.GetSystemControl);
+		CommandSupport.sendCommand(eventSrc, CommandStrings.GetNetWorkControl);
+		CommandSupport.sendCommand(eventSrc, CommandStrings.GetFirmwareVersionInfo);
+		CommandSupport.sendCommand(eventSrc, CommandStrings.GetHDCPKeyInfo);
+		CommandSupport.sendCommand(eventSrc, CommandStrings.GetVideoControl);
+		CommandSupport.sendCommand(eventSrc, CommandStrings.GetAudioControl);
+		CommandSupport.sendCommand(eventSrc, CommandStrings.GetVirtualAPControl);
+		CommandSupport.sendCommand(eventSrc, CommandStrings.GetP2PStatusInfo);
+		CommandSupport.sendCommand(eventSrc, CommandStrings.GetVideoProtectInfo);
+		CommandSupport.sendCommand(eventSrc, CommandStrings.GetWlanConnectInfo, null, [WlanConnInfoPostFilter]);
+		CommandSupport.sendCommand(eventSrc, CommandStrings.GetFirmVersionInfo, null, [FirmVersionInfoPostFilter]);
+	}
+	
+	function waitAllEvents(eventSrc, afterWaitingHandler){
+		var events = [ EventObjectSupport.SystemInfoFetched,
+						EventObjectSupport.NetworkInfoFetched,
+						EventObjectSupport.FirmwareInfoFetched,
+						EventObjectSupport.HDCPKeyInfoFetched,
+						EventObjectSupport.VideoProtectInfoFetched,
+						EventObjectSupport.P2PStatusInfoFetched,
+						EventObjectSupport.VideoInfoFetched,
+						EventObjectSupport.AudioInfoFetched,
+						EventObjectSupport.VirtualAPFetched,
+						EventObjectSupport.WlanConnInfoFetched,
+						EventObjectSupport.FirmVersionInfoFetched ];
+		var sel = new EventSelector();
+		
+		sel.waitAll(eventSrc, events, afterWaitingHandler);
+	}
+	
+	function fetchAuthInfo(callback) {
+		var params = new Parameters();
+		params.setParameter("command", "queryauth");
+		AjaxSupport.doGet(userUri, params, function(req){
+			var auth;
+			eval("auth = " + req.responseText);
+			var tmp = function(){
+				callback(auth);
+				hideWaiting();
+			};
+			
+			tmp();
+		});
+	}
+	
+	var WlanConnInfoPostFilter = new Filter(function(src, command, request,
+			context) {
+		var lastMsg = context.getAttribute(CommandSupport.commandResultKey);
+		var connInfoStr = lastMsg.split("\n\n")[1];
+		connInfoStr = connInfoStr.replace(/\n/g, "&&");
+		context.setAttribute(CommandSupport.commandResultKey, "Wireless:"
+				+ connInfoStr);
+	});
+
+	var FirmVersionInfoPostFilter = new Filter(function(src, command, request,
+			context) {
+		var lastMsg = context.getAttribute(CommandSupport.commandResultKey);
+		var msg = lastMsg.replace("SystemCommandRespone:getverisoninfo:", "");
+		msg = msg.split("\n")[0];
+		context.setAttribute(CommandSupport.commandResultKey, "FirmVersion:"
+				+ msg);
+	});
+	
+	function systemStatusFetchedListener(src, eventObj, extra){
+		var langVal = extra[0].value[0].value;
+
+		if(langVal == "[OSD_SCHINESE]"){
+			window.langindex = "zh_cn";
+		}
+		else if(langVal == "[OSD_ENGLISH]"){
+			window.langindex = "en_us";
+		}
+		else{
+			window.langindex = "en_us";
+		}
+		document.getElementById("forLanguage").innerHTML = window.langindex;
+	}
+	
+	function eventFetchedListener(src, eventObj, extra){
+		
+		var elems = src.getElementsByTagName("*");
+		for(var i=0; i<elems.length; i++){
+			var elem = elems[i];
+			var eventAttr = null;
+			eval("eventAttr = " + elem.getAttribute("event"));
+			var bindAttr = elem.getAttribute("binding");
+			var index = elem.getAttribute("index");
+			if(eventAttr != null && bindAttr != null && index != null && eventAttr == eventObj){
+				var target = bindAttr.split("=")[0];
+				var express = bindAttr.split("=")[1];
+				express = express.replace(/#index/g, index);
+				eval("elem." + target + " = extra" + express); 
+			}
+		}
+	}
+	
+	function accessPointListFetchedListener(src, eventObj, apList){
+		var overHandler = "onmouseover='wifiSetupMenuItemOver(this);'";
+		if (browser.versions.mobile && !browser.versions.iPad){
+			overHandler = "";
+		}
+		var oDiv = document.getElementById("wifiApListDiv");
+		oDiv.innerHTML = "";
+		oDiv.apList = apList;
+		for(var i=0; i<apList.length; i++){
+			var wifi = apList[i];
+			var pow = 0;
+			
+			if(wifi.level >= 0 && wifi.level <= 20){
+				pow = 0;
+			}
+			else if(wifi.level > 20 && wifi.level <= 40){
+				pow = 1;
+			}
+			else if(wifi.level > 40 && wifi.level <= 60){
+				pow = 2;
+			}
+			else if(wifi.level > 60 && wifi.level <= 80){
+				pow = 3;
+			}
+			else if(wifi.level > 80 && wifi.level <= 100){
+				pow = 4;
+			}
+			
+			var pos = 0;
+			if(wifi.securVal == 0){
+				pos = pow * (-45);
+			}
+			else{
+				pos = (5 - pow) * 45;
+			}
+			//alert(pos);
+			oDiv.innerHTML += 
+				"<div " + overHandler + " style='cursor:pointer;'><a href='#" + (wifi.securVal == 0  ? "" : "connectApPage") + "' data-rel='dialog' data-transition='pop' onclick='doConnectAp(" + i + ")'><div class='wifiSetupItemWrapper'>" +
+					"<div class='wifiSetupItem'>" +
+						"<span class='wifiAPName'>" + apList[i].ssid + "</span>" +
+						"<span class='wifiAPImg' style='background-position: " + pos + "px, 0px;'>&nbsp;</span>" +
+					"</div>" +
+					"<div style='clear: both;'></div></a>" +
+				"</div>" +
+				"<div class='wifiSetupLine'>" +
+					"<hr color='#63B8FF'>" +
+				"</div></div>";
+		}
+		oDiv.apList = apList;
+		hideWaiting();
+	}
+	
+	function wifiSetupMenuItemOver(div){
+		var bgColor = div.style.backgroundColor;
+		div.style.backgroundColor = "#6699FF";
+		div.onmouseout = function(){
+			div.style.backgroundColor = bgColor;
+		};
+	};
+
+	var wifi;
+	function doConnectAp(index){
+		var oDiv = document.getElementById("wifiApListDiv");
+		if(oDiv.apList != null && index < oDiv.apList.length){
+
+			wifi = oDiv.apList[index];
+			if(wifi.securVal != 0){
+				var cmd = "getApPassword:" + wifi.ssid;
+				sendCommand(cmd, getApPasswordHandler);
+				$("#connectApPage").live("pagecreate", function(event) {
+					$("#connetApLink").click(function() {
+						var sysLanguage = document.getElementById("forLanguage").innerHTML;
+						if ( sysLanguage.length <= 0 )
+						{
+							sysLanguage = "en_us";
+						}
+						if(document.getElementById("apPassword").value.length == 0){
+							alert(i18n_alert[sysLanguage]["wifi_connect.password_empty"]);
+						}
+						else{
+							var cmd = "wlanConnectAp:" + wifi.ssid + ":" + wifi.ssid + ":" + wifi.securVal + ":" + document.getElementById("apPassword").value;
+							showWaiting();
+							//alert(escape(cmd))
+							//return;
+							sendCommand(cmd, connectApHandler);
+						}
+					});
+				});
+			}
+			else{
+				if(confirm("Join to " + wifi.ssid + "?")){
+					var cmd = "wlanConnectAp:" + wifi.ssid + ":" + wifi.ssid + ":" + wifi.securVal;
+					showWaiting();
+					sendCommand(cmd, connectApHandler);
+				}
+			}
+		}
+	}
+
+	function getApPasswordHandler(req){
+		if( req.responseText.substring( 0, 3 ) == "OK:" )
+		{
+			strPassword = req.responseText.substring( 3 );
+			if(confirm("Join to " + wifi.ssid + "?")){
+				var cmd = "wlanConnectAp:" + wifi.ssid + ":" + wifi.ssid + ":" + wifi.securVal + ":" + strPassword;
+				showWaiting();
+				sendCommand(cmd, connectApHandler);
+			}
+		}
+	}
+
+	function connectApHandler(){
+		var sysLanguage = document.getElementById("forLanguage").innerHTML;
+		if (sysLanguage.length <= 0)
+		{
+			sysLanguage = "en_us";
+		}
+		setTimeout(function(){
+			alert(i18n_alert[sysLanguage]["status.dlg.disconnect"]);
+			hideWaiting();
+			document.getElementById("apPassword").value = "";
+		}, 25000);
+	}
+	
+	
+	function evalSpanAndSelect(spanId, selId, obj, limit, filter){
+		var select = document.getElementById(selId);
+		select.innerHTML = "";
+		if(select.getAttribute("index") == null)
+			return;
+		var index = parseInt(select.getAttribute("index"));
+		select.name = obj[index]["prop"];
+		if(document.getElementById(spanId) != null)
+			document.getElementById(spanId).innerHTML = obj[index].prop;
+		
+		var items = obj[index]["value"];
+		var len = items.length;
+		if(limit != null){
+			len = limit;
+		}
+		for(var i=0; i<len; i++){
+			if(filter != null && filter(i, items[i])){
+				continue;
+			}
+			else{
+				var option = document.createElement("option");
+				option.text = items[i].text;
+				option.value = items[i].value;
+				select.options[select.options.length] = option;
+			}
+		}
+		
+		var myselect = $("#" + selId);
+		myselect[0].selectedIndex = 0;
+		myselect.selectmenu("refresh");
+	}
+
+	function SetP2PPageState(obj) {
+		var sysLanguage = document.getElementById("forLanguage").innerHTML;
+		if (sysLanguage.length <= 0)
+		{
+			sysLanguage = "en_us";
+		}
+
+		p2pStatus = obj[0]["value"].split("\n")[0];
+		var stResult = "common.off";
+		if (p2pStatus.match("On")){
+			stResult = "common.on";
+		}
+		document.getElementById("p2pSetupSpan").innerHTML = obj[0]["prop"].split("\n")[0];
+		document.getElementById("p2pSetupValue").innerHTML = i18n[sysLanguage][stResult];
+	}
+
+	var hashMap = new Object;
+
+	hashMap["#statusPage"] = function() {
+		onPageLoaded(document.getElementById("statusPage"),
+				hashMap["#statusPage"]);
+	};
+
+	hashMap["#wifiSetupPage"] = function() {
+		if (hashMap["#wifiSetupPage"].flag == null) {
+			EventMgr.addListener(EventObjectSupport.AccessPointListFetched,
+					new EventListener("wifiSetup",
+							accessPointListFetchedListener));
+			hashMap["#wifiSetupPage"].flag = new Object;
+		}
+		CommandSupport.sendCommand("wifiSetup",
+				CommandStrings.GetAccessPointList);
+	};
+
+	hashMap["#apSetupPage"] = function() {
+		if (hashMap["#apSetupPage"].flag == null) {
+			EventMgr.addListener(EventObjectSupport.P2PStatusInfoFetched,
+				new EventListener("apSetupPage",
+					function(src, eventObj, extra) {
+						SetP2PPageState(extra);
+					}));
+			EventMgr.addListener(EventObjectSupport.NetworkInfoFetched,
+					new EventListener("apSetupPage", function(src, eventObj,
+							extra) {
+						evalSpanAndSelect("virtualApBridgeSpan", "virtualApBridgeSelect", extra);
+					}));
+			EventMgr.addListener(EventObjectSupport.VirtualAPFetched,
+					new EventListener("apSetupPage", function(src, eventObj,
+							extra) {
+						
+						evalSpanAndSelect("wirelessSecuritySpan", "wirelessSecuritySelect", extra);
+						document.getElementById("wirelessPasswordSpan").innerHTML = extra[1]["prop"];
+						if(document.getElementById("wirelessSecuritySelect").value == "[NETWL_SEC_OPEN]"){
+							document.getElementById("wirelessPasswordInput").disabled = true;
+						}
+						else{
+							document.getElementById("wirelessPasswordInput").disabled = false;
+						}
+	
+						document.getElementById("wirelessSecuritySelect").onchange = function(){
+							if(this.value == "[NETWL_SEC_OPEN]"){
+								document.getElementById("wirelessPasswordInput").disabled = true;
+								document.getElementById("wirelessPasswordShow").disabled = true;
+								document.getElementById("wirelessPasswordInput").value = "";
+								document.getElementById("wirelessPasswordShow").value = "";
+							}
+							else{
+								document.getElementById("wirelessPasswordInput").disabled = false;
+								document.getElementById("wirelessPasswordShow").disabled = false;
+							}
+						};
+						
+						$(".passShowSelect").val(0);
+						$(".passShowSelect").slider("refresh");
+						
+					}));
+			hashMap["#apSetupPage"].flag = new Object;
+		}
+		sendAllCommand("apSetupPage");
+		waitAllEvents("apSetupPage", function(){
+			hideWaiting();
+		});
+	};
+
+	hashMap["#systemInfoPage"] = function() {
+		if (hashMap["#systemInfoPage"].flag == null) {
+			EventMgr.addListener(
+				EventObjectSupport.VideoProtectInfoFetched,
+				new EventListener("systemInfoPage",
+					 function(src, eventObj, extra) {
+				var sysLanguage = document.getElementById("forLanguage").innerHTML;
+				if (sysLanguage.length <= 0)
+				{
+					sysLanguage = "en_us";
+				}
+				var title = document.getElementById("videoProtectTitle");
+				var result = document.getElementById("videoProtectResult");
+				videoProtectStatus = extra[0]["value"].split("\n")[0];
+				title.innerHTML = extra[0]["prop"].split("\n")[0];
+				var lang_key = "common.off"
+				if(videoProtectStatus.match("On")){
+					lang_key = "common.on";
+				}
+				result.innerHTML = i18n[sysLanguage][lang_key];
+			}));
+			EventMgr.addListener(EventObjectSupport.NetworkInfoFetched,
+					new EventListener("systemInfoPage", function(src, eventObj,
+							extra) {
+				var input = document.getElementById("deviceNameInput"); 
+				input.value = extra[parseInt(input.getAttribute("index"))].value;
+				var span = document.getElementById("deviceNameSpan"); 
+				span.innerHTML = extra[parseInt(input.getAttribute("index"))].prop;
+			}));
+			
+			EventMgr.addListener(EventObjectSupport.SystemInfoFetched,
+					new EventListener("systemInfoPage", function(src, eventObj,
+							extra) {
+				evalSpanAndSelect("sysLangSpan", "sysLangSelect", extra, 2);
+			}));
+			hashMap["#systemInfoPage"].flag = new Object;
+		}
+		sendAllCommand("systemInfoPage");
+		waitAllEvents("systemInfoPage", function(){
+			hideWaiting();
+		});
+	};
+
+	hashMap["#restoreDefaultPage"] = function() {
+		hideWaiting();
+	};
+
+	hashMap["#uploadUpgradePage"] = function() {
+		hideWaiting();
+	};
+	
+	hashMap["#authSettingsPage"] = function() {
+		var callback = function(auth){
+			var lang = i18n[window.langindex];
+			if(lang == null){
+				setTimeout(function(){callback(auth);}, 500);
+			}else{
+				$("#passProtectSelect").bind("change", function(){
+					if($("#passProtectSelect").val() == 1){
+						$("#sysUsername").removeAttr("disabled");
+						$("#sysPassword").removeAttr("disabled");
+					}
+					else if($("#passProtectSelect").val() == 0){
+						$("#sysUsername").attr("disabled", "disabled");
+						$("#sysPassword").attr("disabled", "disabled");
+					}
+				});
+				$("#passProtectSelect").val(auth.enable);
+				$("#passProtectSelect").slider("refresh");
+				$("#sysUsername").val(auth.username);
+				$("#sysPassword").val(auth.password);
+				
+				if($("#passProtectSelect").val() == 1){
+					$("#sysUsername").removeAttr("disabled");
+					$("#sysPassword").removeAttr("disabled");
+				}
+				else if($("#passProtectSelect").val() == 0){
+					$("#sysUsername").attr("disabled", "disabled");
+					$("#sysPassword").attr("disabled", "disabled");
+				}
+				hideWaiting();
+			}
+		};
+		
+		$("#authSaveBtn").bind("click", function(){
+			if($("#passProtectSelect").val() == 1){
+				var sysLanguage = document.getElementById("forLanguage").innerHTML;
+				if (sysLanguage.length <= 0)
+				{
+					sysLanguage = "en_us";
+				}
+				if($("#sysUsername").val() == ""){
+					alert(i18n_alert[sysLanguage]["login_user_name.error_no"]);
+					return;
+				}
+				
+				if($("#sysPassword").val() == ""){
+					alert(i18n_alert[sysLanguage]["login_user_password.error_no"]);
+					return;
+				}
+				
+				var params = new Parameters();
+				params.setParameter("command", "enableauth");
+				params.setParameter("username", document.getElementById("sysUsername").value);
+				params.setParameter("password", document.getElementById("sysPassword").value);
+				showWaiting();
+				AjaxSupport.doGet(userUri, params, function(req){
+					hideWaiting();
+				});
+			}
+			else{
+				var params = new Parameters();
+				params.setParameter("command", "disableauth");
+				showWaiting();
+				AjaxSupport.doGet(userUri, params, function(req){
+					hideWaiting();
+				});
+			}
+		});
+		
+		fetchAuthInfo(callback);
+	};
+
+	hashMap["#videoSetupPage"] = function() {
+/*		EventMgr.addListener(EventObjectSupport.VideoInfoFetched,
+				new EventListener("videoSetupPage", function(src, eventObj,
+						extra) {
+			evalSpanAndSelect("aspactRatioSpan", "aspactRatioSelect", extra);
+			evalSpanAndSelect("tvSystemSpan", "tvSystemSelect", extra, null, function(index, item){
+				if(item.value == "[1080P_60HZ]" || item.value == "[HDMI_AUTO_DETECT]" || item.value == "[720P_60HZ]"){
+					return false;
+				}
+				else{
+					return true;
+				}
+			});
+			
+			var slider = document.getElementById("scaleVideoSelect"); 
+			slider.value = extra[parseInt(slider.getAttribute("index"))]["value"][0].value;
+			var span = document.getElementById("scaleVideoSpan"); 
+			span.innerHTML = extra[parseInt(slider.getAttribute("index"))].prop;
+			$(slider).slider("refresh");
+			
+			var slider = document.getElementById("videoFullSelect"); 
+			slider.value = extra[parseInt(slider.getAttribute("index"))]["value"][0].value;
+			var span = document.getElementById("videoFullSpan"); 
+			span.innerHTML = extra[parseInt(slider.getAttribute("index"))].prop;
+			$(slider).slider("refresh");
+			
+		}));
+		sendAllCommand("videoSetupPage");
+		waitAllEvents("videoSetupPage", function(){
+			hideWaiting();
+		});*/
+		command = "SystemCommand:Get4by3UI";
+		sendCommand(command, function ratioHandle(req) {
+			var selNode = document.getElementById("aspectRatioSelect");
+			var op1 = document.createElement("option");
+			var op2 = document.createElement("option");
+			op1.text = "16:9";
+			op2.text = "4:3";
+			if (req.responseText.match("ON")){
+				//alert("ON");
+				op2.selected = "selected";
+				selNode.index = 1;
+			}
+			else if (req.responseText.match("OFF")){
+				//alert("OFF");
+				op1.selected = "selected";
+				selNode.index = 0;
+			}
+			try {
+				selNode.add(op1, selNode.options[null]);
+				selNode.add(op2, selNode.options[null]);
+			}
+			catch (e) {
+				selNode.add(op1, null);
+				selNode.add(op2, null);
+			}
+			hideWaiting();
+		});
+	};
+
+	hashMap["#audioSetupPage"] = function() {
+		EventMgr.addListener(EventObjectSupport.AudioInfoFetched,
+				new EventListener("audioSetupPage", function(src, eventObj,
+						extra) {
+			evalSpanAndSelect("hdmiOutputSpan", "hdmiOutputSelect", extra);
+		}));
+		sendAllCommand("audioSetupPage");
+		waitAllEvents("audioSetupPage", function(){
+			hideWaiting();
+		});
+	};
+
+	function showWaiting() {
+		if (parent != window) {
+			parent.showWaiting();
+		} else {
+			window.location.href = "#waitingPage";
+		}
+	}
+	
+	function waitingMessage(msg){
+		if (parent != window) {
+			parent.waitingMessage(msg);
+		} else {
+			$("#waitingMessage").val(msg);
+		}
+	}
+
+	function hideWaiting() {
+		if (parent != window) {
+			parent.hideWaiting();
+		} else {
+			var page = window.pageInfo["page"];
+			var handler = window.pageInfo["handler"];
+			var params = window.pageInfo["params"];
+
+			$(document).bind('pagebeforechange', function(e, data) {
+				if (typeof data.toPage != "string") {
+					return;
+				}
+
+				if (handler != null) {
+					handler(params);
+				}
+			});
+
+			if (page != null) {
+				window.location.href = page;
+			}
+		}
+	}
+	
+	function isIPad(){
+	
+		var ua = navigator.userAgent;
+	  
+	    if (ua.indexOf("iPad") > 0) {  
+	       return true;  
+	    } else {
+	    	return false;
+	    }
+    }
+
+	$(document).ready(function() {
+		initPage();
+
+	 	if (browser.versions.mobile && !browser.versions.iPad) {
+	 		var page = location.hash.split("?")[1].split("=")[1];
+	 		window.pageInfo = new Object;
+	 		pageInfo["page"] = "#" + page;
+	 		pageInfo["handler"] = function() {
+	 			if (history && history.pushState) {
+	 				$(window).bind( "popstate",
+	 					function(e) {
+	 						if (window.location.href.indexOf("waitingPage") != -1) {
+	 							//window.location.href = "menu.html#phoneSettingsPage";  // Destin fix iOS 6.1.13~ and Android 4.1~ not able to save setting
+	 						}});
+	 			}
+	 		};
+	 		pageInfo["params"] = null;
+	 		init("#" + page);
+	 	} else {
+	 		showWaiting();
+	 		init(location.hash);
+	 	}
+	 	
+	 	$(".passShowSelect").bind("change", function(){
+	 		var selFor = $(".passShowSelect").attr("for");
+	 		var pass = document.getElementById(selFor.split(",")[0]);
+	 		var show = document.getElementById(selFor.split(",")[1]);
+	 		
+	 		var passWrap = document.getElementById($(pass).attr("wrap"));
+	 		var showWrap = document.getElementById($(show).attr("wrap"));
+	 		
+	 		if($(".passShowSelect").val() == 1){
+	 			passWrap.style.display = "none";
+	 			showWrap.style.display = "block";
+	 			show.value = pass.value;
+	 			show.disabled = pass.disabled;
+	 		}
+	 		else if($(".passShowSelect").val() == 0){
+	 			passWrap.style.display = "block";
+	 			showWrap.style.display = "none";
+	 			pass.value = show.value;
+	 			pass.disabled = show.disabled;
+	 		}
+	 	});
+	 	
+	 	if(isIPad()){
+	 		$(".content").css("min-Height", "680px");
+	 	}
+	 	
+	 	$("#apSetupSaveBtn").bind("click", function(){
+	 	
+	 		var eventSrc = "settings";
+	 		var sysLanguage = document.getElementById("forLanguage").innerHTML;
+			if (sysLanguage.length <= 0)
+			{
+				sysLanguage = "en_us";
+			}
+		 	if(document.getElementById("wirelessSecuritySelect").value == "[NETWL_SEC_OPEN]"){
+				CommandSupport.sendCommand(eventSrc, CommandStrings.SetVirtualAPSetup + document.getElementById("wirelessSecuritySelect").value);
+			}
+			else{
+				var password = "";
+				if($("#apSetupPage .passShowSelect").val() == 0){
+					password = document.getElementById("wirelessPasswordInput").value;
+				}
+				else{
+					password = document.getElementById("wirelessPasswordShow").value;
+				}
+				if(password == ""){
+					alert(i18n_alert[sysLanguage]["wifi_encrypt.password_no"]);
+					return;
+				}
+				else if(password.length < 8){
+					alert(i18n_alert[sysLanguage]["wifi_encrypt.password_length"]);
+					return;
+				}
+				else{
+					CommandSupport.sendCommand(eventSrc, CommandStrings.SetVirtualAPSetup + document.getElementById("wirelessSecuritySelect").value + "+" + password);
+				}
+			}
+			CommandSupport.sendCommand(eventSrc, CommandStrings.SetVirtualAPBridge + document.getElementById("virtualApBridgeSelect").value);
+			
+			showWaiting();
+			setTimeout(function(){
+				alert(i18n_alert[sysLanguage]["status.dlg.disconnect"]);
+				hideWaiting();
+			}, 12000);
+	 	});
+	 	
+	 	
+	 	$("#systemInfoSaveBtn").bind("click", function(){
+			var sysLanguage = document.getElementById("forLanguage").innerHTML;
+			if (sysLanguage.length <= 0)
+			{
+				sysLanguage = "en_us";
+			}
+	 		var eventSrc = "settings";
+	 		var flag = /^[A-Za-z0-9_-]+$/.test(document.getElementById("deviceNameInput").value) ;
+			if(!flag){
+				alert(i18n_alert[sysLanguage]["system_device_name.error_char"]);
+				return;
+			}
+			flag = document.getElementById("deviceNameInput").value.length > 16;
+			if(flag){
+				alert(i18n_alert[sysLanguage]["system_device_name.error_length"]);
+				return;
+			}
+			CommandSupport.sendCommand(eventSrc, CommandStrings.ChangeLanguage + document.getElementById("sysLangSelect").value);
+			CommandSupport.sendCommand(eventSrc, CommandStrings.SetDeviceFriendlyName + document.getElementById("deviceNameInput").value);
+			
+			showWaiting();
+			setTimeout(function(){
+				alert(i18n_alert[sysLanguage]["status.dlg.disconnect"]);
+				hideWaiting();
+			}, 12000);
+	 	});
+	 	
+/*	 	$("#videoSetupSaveBtn").bind("click", function(){
+	 		var eventSrc = "settings";
+	 		CommandSupport.sendCommand(eventSrc, CommandStrings.SetVideoRatio + document.getElementById("aspactRatioSelect").value);
+			CommandSupport.sendCommand(eventSrc, CommandStrings.SetTVSystem + document.getElementById("tvSystemSelect").value);
+			CommandSupport.sendCommand(eventSrc, CommandStrings.SetScaleVideoOutput + document.getElementById("scaleVideoSelect").value);
+			CommandSupport.sendCommand(eventSrc, CommandStrings.SetVideoFullScreent + document.getElementById("videoFullSelect").value);
+			showWaiting();
+			setTimeout(function(){
+				hideWaiting();
+			}, 5000);
+	 	});*/
+	 	
+	 	$("#audioSetupSaveBtn").bind("click", function(){
+	 		var eventSrc = "settings";
+	 		CommandSupport.sendCommand(eventSrc, CommandStrings.SetHDMIOutput + document.getElementById("hdmiOutputSelect").value);
+			showWaiting();
+			setTimeout(function(){
+				hideWaiting();
+			}, 2000);
+	 	});
+	 	
+	 	$("#onlineUpgradeBtn").bind("click", function(){
+	 		sendCommand("SystemCommand+onlineupgrade", function(req){
+	 			if(req.responseText.substring(0, req.responseText.length-2) == "SystemCommandRespone:onlineupgrade:S_OK"){
+	 				//alert("start online upgrading");
+	 				pollOnlineUpgradeProcess();
+	 			}
+	 		});
+	 	});
+	 	
+	 	$("#uploadUpgradeBtn").bind("click", function(){
+	 		if(document.getElementById("firmFile").value == ""){
+				var sysLanguage = document.getElementById("forLanguage").innerHTML;
+				if (sysLanguage.length <= 0)
+				{
+					sysLanguage = "en_us";
+				}
+				alert(i18n_alert[sysLanguage]["system_upload.error"]);
+				return;
+			}
+			else{
+				initUploadFrame();
+				showWaiting();
+				document.getElementById("onlineup_upform").submit();
+			}
+	 	});
+	 	
+	 	$("#restoreFactoryBtn").bind("click", function(){
+		 	if(confirm("Are you sure to restore factory settings?")){
+				CommandSupport.sendCommand("settings", CommandStrings.RestoreFactory);
+				showWaiting();
+				setTimeout(function(){
+					hideWaiting();
+				}, 5000);
+			}
+	 	});
+
+		$("#p2pSetupSwitchBtn").bind("click", function(){
+			var commandString = "";
+			var sysLanguage = document.getElementById("forLanguage").innerHTML;
+			if (sysLanguage.length <= 0)
+			{
+				sysLanguage = "en_us";
+			}
+			if (p2pStatus.match("On")){
+				commandString = CommandStrings.SetP2PStatus + "Off";
+			}
+			else if (p2pStatus.match("Off")){
+				commandString = CommandStrings.SetP2PStatus + "On";
+			}
+			CommandSupport.sendCommand("settings", commandString);
+			showWaiting();
+			setTimeout(function(){
+				alert(i18n_alert[sysLanguage]["system_reboot_alert"]);
+				hideWaiting();
+			}, 2000);
+		});
+
+		$("#videoProtectSwitchBtn").bind("click", function(){
+			var sysLanguage = document.getElementById("forLanguage").innerHTML;
+			if (sysLanguage.length <= 0)
+			{
+				sysLanguage = "en_us";
+			}
+			CommandSupport.sendCommand("settings", CommandStrings.SetVideoProtectStatus);
+			showWaiting();
+			var node = document.getElementById("videoProtectResult");
+			var node_lang_key = "";
+			if (videoProtectStatus.match("On")) {
+				videoProtectStatus = "Off";
+				node_lang_key = "common.off";
+			} else if (videoProtectStatus.match("Off")) {
+				videoProtectStatus = "On";
+				node_lang_key = "common.on";
+			}
+
+			setTimeout(function(){
+				node.innerHTML = i18n[sysLanguage][node_lang_key];
+				alert(i18n_alert[sysLanguage]["system_set_success"]);
+				hideWaiting();
+			}, 5000);
+		});
+	 });
+	 
+	 function initUploadFrame(){
+		var iframe = document.getElementById("uploadFrame");
+		if (iframe.attachEvent) {
+			iframe.attachEvent("onload", function() {
+				onFirmFileUploaded(iframe);
+			});
+		} else {
+			iframe.onload = function() {
+				onFirmFileUploaded(iframe);
+			};
+		}
+	}
+	
+	function onFirmFileUploaded(iframe){
+		
+		//CommandSupport.sendCommand("settings", CommandStrings.OnlineUpgrade);
+		setTimeout(function(){
+			hideWaiting();
+		}, 10000);
+	}
+
+	function wifiRefresh()
+	{
+		if (browser.versions.mobile && !browser.versions.iPad)
+		{
+			window.location.replace("settings.html#waitingPage?page=wifiSetupPage");
+		}
+		 window.location.reload();
+	}
+
+	function pollOnlineUpgradeProcess(){
+		//SystemCommand+getOnlineUpgradeProgress
+		//"FW_CHECKING" 檢查更新
+		//"FW_CHECKING_COMPLETED" 檢查完成
+		//"FW_CHECKING_ERROR" 檢查更新出錯（結束等待頁面）
+		//"FW_DOWNLOADING:?%" 下載進度（? = 0 ~ 100）
+		//"FW_DOWNLOAD_COMPLETED" 下載完成
+		//"FW_DOWNLOAD_ERROR" 下載出錯（結束等待頁面）
+		//"FW_READY_TO_UPDATE" 即將重新開機並更新（結束等待頁面）
+		
+		var timer = null;
+		var map = new Object;
+		
+		map["FW_CHECKING"] = function(param){
+			waitingMessage("Checking for updates");
+		};
+		
+		map["FW_CHECKING_COMPLETED"] = function(param){
+			waitingMessage("Checking for updates completed");
+		};
+		
+		map["FW_CHECKING_ERROR"] = function(param){
+			waitingMessage("Checking for updates failed");
+			clearInterval(timer);
+			setTimeout(function(){
+				hideWaiting();
+			}, 1000);
+		};
+		
+		map["FW_DOWNLOADING"] = function(param){
+			waitingMessage(param);
+		};
+		
+		map["FW_DOWNLOAD_COMPLETED"] = function(param){
+			waitingMessage("Downloading firmware completed");
+		};
+		
+		map["FW_DOWNLOAD_ERROR"] = function(param){
+			waitingMessage("Downloading firmware failed");
+			clearInterval(timer);
+			setTimeout(function(){
+				hideWaiting();
+			}, 1000);
+		};
+		
+		map["FW_READY_TO_UPDATE"] = function(param){
+			waitingMessage("Waiting for rebooting and upgrading");
+			clearInterval(timer);
+			setTimeout(function(){
+				hideWaiting();
+			}, 1000);
+		};
+		
+		showWaiting();
+		timer = setInterval(function(){
+			sendCommand("SystemCommand+getOnlineUpgradeProgress", function(req){
+				var resp = req.responseText.substring(0, req.responseText.length-2);
+				var perc = null;
+				if(resp.indexOf(":") >= 0){
+					var arr = resp.splite(":");
+					resp = arr[0];
+					perc = arr[1];
+				}
+		 		map[resp](perc);
+		 	});
+		}, 1000);
+		
+	}
+
+	function setRatioInfo(nodeName){
+		showWaiting();
+		var node = document.getElementById(nodeName);
+		var select = node.selectedIndex;
+		var command = "";
+		if (select)
+			command = "SystemCommand+Set4by3UI+$[ON]";
+		else
+			command = "SystemCommand+Set4by3UI+$[OFF]";
+		sendCommand(command, function() {
+			var sysLanguage = document.getElementById("forLanguage").innerHTML;
+			if ( sysLanguage.length <= 0 )
+			{
+				sysLanguage = "en_us";
+			}
+			alert(i18n_alert[sysLanguage]["system_reboot_alert"]);
+			hideWaiting();
+		});
+	}
+
+	function init(hash) {
+		
+		if (hash == "") {
+			window.location.href = "settings.html#statusPage";
+		} else {
+			var loader = hashMap[hash];
+			if (loader != null) {
+				loader();
+			} else {
+				//alert("need loader");
+				hideWaiting();
+			}
+		}
+	}
+
+	function initPage(){
+		sendCommand(CommandStrings.GetSystemControl, function(req){
+			var pos = req.responseText.indexOf(":");
+			var info = req.responseText.substring(pos+1);
+			var arr = info.split("&&");
+			var langVal = "";
+
+			var prop = arr[0]	// For Language
+			if(prop.indexOf(":") != -1){
+				pos = prop.indexOf(":"); 
+				var value = prop.substring(pos+1);
+				if(value.indexOf("##") == 0){
+					value = value.substring(2, value.length-2);
+					var subArr = value.split("$$");
+					var pos1 = subArr[0].indexOf("<-$");
+					var pos2 = subArr[0].indexOf("->");
+					langVal = subArr[0].substring(pos1+"<-$".length, pos2);
+				}
+			}
+			if(langVal != null && langVal != ""){
+				var sysLanguage = "";
+				if(langVal == "[OSD_SCHINESE]"){
+					sysLanguage = "zh_cn";
+				}
+				else if(langVal == "[OSD_ENGLISH]"){
+					sysLanguage = "en_us";
+				}
+				else{
+					sysLanguage = "en_us";
+				}
+
+				document.getElementById("forLanguage").innerHTML = sysLanguage;
+				initI18N(sysLanguage);
+			}
+		});
+	}
+
+</script>
+</head>
+<body>
+	<label style="display: none;" id="forLanguage"></label>
+	<div id="statusPage" data-role="page">
+		<div id="statusContent" data-role="content" class="content"
+			style="background-color: #FFFFFF; min-height: 640px; color: #FFFFFF;">
+			<ul data-role="listview" data-theme="d">
+				<li data-theme="b"><span class="systemLink" lang.key="common.system">System</span></li>
+				<li>
+					<span class="statusTitle" id="deviceNameProperty" index="0" event="EventObjectSupport.NetworkInfoFetched" binding="innerHTML=[#index].prop">
+						Device Name:
+					</span> 
+					<span class="statusValue" id="deviceNameValue" index="0" event="EventObjectSupport.NetworkInfoFetched" binding="innerHTML=[#index].value">
+						&nbsp;
+					</span>
+					<div style="clear: both;"></div></li>
+				<li>
+					<span class="statusTitle" id="languageProperty" index="0" event="EventObjectSupport.SystemInfoFetched" binding="innerHTML=[#index].prop">Language:</span> 
+					<span class="statusValue" id="languageValue" index="0" event="EventObjectSupport.SystemInfoFetched" binding="innerHTML=[#index].value[#index].text">&nbsp;</span>
+					<div style="clear: both;"></div></li>
+				<li>
+					<span class="statusTitle" index="0" lang.key="status.passprotect">Password Protection:</span> 
+					<span class="statusValue" id="passwordProtectValue" index="0" >&nbsp;</span>
+					<div style="clear: both;"></div></li>
+				<li>
+					<span class="statusTitle" id="firmwareProperty" index="0" event="EventObjectSupport.FirmwareInfoFetched" binding="innerHTML=[#index].prop">Firmware Version:</span>
+					<span class="statusValue" id="firmwareValue" index="0" event="EventObjectSupport.FirmwareInfoFetched" binding="innerHTML=[#index].value">&nbsp;</span>
+					<div style="clear: both;"></div></li>
+				<li>
+					<span class="statusTitle" id="hdcpKeyProperty" index="0" event="EventObjectSupport.HDCPKeyInfoFetched" binding="innerHTML=[#index].prop">HDCP Key status:</span>
+					<span class="statusValue" id="hdcpKeyValue" index="0" event="EventObjectSupport.HDCPKeyInfoFetched" binding="innerHTML=[#index].value">&nbsp;</span>
+					<div style="clear: both;"></div></li>
+				<li>
+					<span class="statusTitle" id="videoProtectInfoProperty" index="0" event="EventObjectSupport.VideoProtectInfoFetched" binding="innerHTML=[#index].prop">Video Preemptive Ability</span>
+					<span class="statusValue" id="videoProtectInfoValue" index="0" event="EventObjectSupport.VideoProtectInfoFetched" binding="innerHTML=[#index].value">&nbsp;</span>
+					<div style="clear: both;"></div></li>
+				<li data-theme="b"><span class="networkLink" lang.key="common.network">Network</span></li>
+				<li>
+					<span class="statusTitle" id="virtualApBridgeProperty" index="4" event="EventObjectSupport.NetworkInfoFetched" binding="innerHTML=[#index].prop">Virtual AP Bridge:</span> 
+					<span class="statusValue" id="virtualApBridgeValue" index="4" event="EventObjectSupport.NetworkInfoFetched" binding="innerHTML=[#index].value[0].text">&nbsp;</span>
+					<div style="clear: both;"></div></li>
+				<li>
+					<span class="statusTitle" id="wirelessSecurityProperty" index="0" event="EventObjectSupport.VirtualAPFetched" binding="innerHTML=[#index].prop">Wireless Security:</span> 
+					<span class="statusValue" id="wirelessSecurityValue" index="0" event="EventObjectSupport.VirtualAPFetched" binding="innerHTML=[#index].value[0].text">&nbsp;</span>
+					<div style="clear: both;"></div></li>
+				<li>
+					<span class="statusTitle" id="connectedLanProperty" index="2" event="EventObjectSupport.WlanConnInfoFetched" binding="innerHTML=[#index].prop">Wireless SSID:</span> 
+					<span class="statusValue" id="connectedLanValue" index="2" event="EventObjectSupport.WlanConnInfoFetched" binding="innerHTML=[#index].value">&nbsp;</span>
+					<div style="clear: both;"></div></li>
+				<li>
+					<span class="statusTitle" id="p2pStatusProperty" index="0" event="EventObjectSupport.P2PStatusInfoFetched" binding="innerHTML=[#index].prop">P2P Owner Status:</span>
+					<span class="statusValue" id="p2pStatusValue" index="0" event="EventObjectSupport.P2PStatusInfoFetched" binding="innerHTML=[#index].value">&nbsp;</span>
+					<div style="clear: both;"></div></li>
+				<li data-theme="b"><span class="videoLink" lang.key="common.video">Video</span></li>
+				<li >
+					<span class="statusTitle" id="aspectRatioProperty" index="6" event="EventObjectSupport.VideoInfoFetched" binding="innerHTML=[#index].prop">Aspect Ratio:</span> 
+					<span class="statusValue" index="6" id="aspectRatioValue" event="EventObjectSupport.VideoInfoFetched" binding="innerHTML=[#index].value[0].text">&nbsp;</span>
+					<div style="clear: both;"></div></li>
+				<li >
+					<span class="statusTitle" id="tvSystemProperty" index="1" event="EventObjectSupport.VideoInfoFetched" binding="innerHTML=[#index].prop">TV System:</span> 
+					<span class="statusValue" index="1" id="tvSystemValue" event="EventObjectSupport.VideoInfoFetched" binding="innerHTML=[#index].value[0].text">&nbsp;</span>
+					<div style="clear: both;"></div></li>
+				<li >
+					<span class="statusTitle" id="scaleVideoProperty" index="2" event="EventObjectSupport.VideoInfoFetched" binding="innerHTML=[#index].prop">Scale Output to 90%:</span>
+					<span class="statusValue" index="2" id="scaleVideoValue" event="EventObjectSupport.VideoInfoFetched" binding="innerHTML=[#index].value[0].text">&nbsp;</span>
+					<div style="clear: both;"></div></li>
+				<li >
+					<span class="statusTitle" id="videoFullProperty" index="3" event="EventObjectSupport.VideoInfoFetched" binding="innerHTML=[#index].prop">Video Full Screen:</span> 
+					<span class="statusValue" index="3" id="videoFullValue" event="EventObjectSupport.VideoInfoFetched" binding="innerHTML=[#index].value[0].text">&nbsp;</span>
+					<div style="clear: both;"></div></li>
+				<li  data-theme="b"><span class="audioLink" lang.key="common.audio">Audio</span></li>
+				<li >
+					<span class="statusTitle" id="hdmiOutputProperty" index="1" event="EventObjectSupport.AudioInfoFetched" binding="innerHTML=[#index].prop">HDMI Output:</span> 
+					<span class="statusValue" index="1" id="hdmiOutputValue" event="EventObjectSupport.AudioInfoFetched" binding="innerHTML=[#index].value[0].text">&nbsp;</span>
+					<div style="clear: both;"></div></li>
+				<li >
+					<span class="statusTitle">Surround Sound:</span> 
+					<span class="statusValue" >&nbsp;</span>
+					<div style="clear: both;"></div></li>
+			</ul>
+		</div>
+	</div>
+	
+	<div id="wifiSetupPage" data-role="page" >
+		<div id="wifiSetupContent" data-role="content" class="content" style="background-color: #888888; min-height: 610px;">
+			<div style="text-align: right;"><a href="#"
+					style="font-size: 10px;color: #BBBBBB; margin-left:auto; margin-right: auto; width: 150px;"
+					data-role="button" class="ui-btn-inline" data-theme="b" onClick="wifiRefresh()" lang.key="common.refresh" lang.child="class=ui-btn-inner;class=ui-btn-text">Refresh</a></div>
+			<div style="height: 20px;">
+				&nbsp;
+			</div>
+			<div id="wifiApListDiv">
+				
+			</div>
+		</div>
+	</div>
+
+	<div id="apSetupPage" data-role="page">
+		<div id="apSetupContent" data-role="content" class="content"
+			style="background-color: #888888; min-height: 610px; color: #FFFFFF;">
+			<div style="height: 60px;">
+				&nbsp;
+			</div>
+			
+			<div style="width: 80%; max_width:500px; margin-left: auto; margin-right: auto; display: none;">
+				<span style="display:inline-block;width:100%">
+					<label id="p2pSetupSpan">P2P Group Owner Mode Switch</label>:&nbsp;&nbsp;
+					<label id="p2pSetupValue">&nbsp;</label></span>
+				<div style="text-align: center; margin-top: 30px;">
+					<span> <a href="#"
+					style="font-size: 10px;color: #BBBBBB; margin-left:auto; margin-right: auto; width: 150px;"
+					data-role="button" class="ui-btn-inline" data-theme="b" id="p2pSetupSwitchBtn" lang.key="common.switch" lang.child="class=ui-btn-inner;class=ui-btn-text">Switch</a> </span>
+				</div>
+			</div>
+			<div style="display: none;">
+				<hr>
+			</div>
+
+			<div
+				style="width: 80%; max-width:500px; margin-left: auto; margin-right: auto;">
+				<span style="display:inline-block;width:100%"> <label
+					for="virtualApBridgeSelect" id="virtualApBridgeSpan">Virtual
+						AP Bridge:</label> </span> <span> <select id="virtualApBridgeSelect"
+					index="4" data-native-menu="true" >
+				</select> </span>
+			</div>
+			
+			<div
+				style="width: 80%; max-width:500px; margin-left: auto; margin-right: auto;">
+				<span style="display:inline-block;width:100%"> <label
+					for="wirelessSecuritySelect" id="wirelessSecuritySpan">Wireless Security:</label> </span> 
+					<span> <select id="wirelessSecuritySelect"
+					index="0" data-native-menu="true">
+				</select> </span>
+			</div>
+
+			<div
+				style="width: 80%; max-width:500px; margin-left: auto; margin-right: auto; margin-top: 10px;">
+				<div>
+					<div style="width: 50%; float: left;">
+						<label for="wirelessPasswordInput" id="wirelessPasswordSpan" style="margin-top: 10px;">Password:</label>
+					</div>
+					<div style="float: left; display: none;">
+						<select class="passShowSelect" for="wirelessPasswordInput,wirelessPasswordShow" data-role="slider"
+							data-theme="a" data-native-menu="true">
+							<option value="0" lang.key="common.off">Off</option>
+							<option value="1" lang.key="common.on">On</option>
+						</select>
+					</div>
+					<div style="clear: both"></div>
+				</div>
+				
+				<div id="wirelessPasswordInputWrapper">
+					<input id="wirelessPasswordInput" type="text" style="width:100%; text-align: center;" wrap="wirelessPasswordInputWrapper"/>
+				</div>
+				
+				<div id="wirelessPasswordShowWrapper" style="display:none;">
+					<input id="wirelessPasswordShow" type="text" style="width:100%; text-align: center;" wrap="wirelessPasswordShowWrapper"/>
+				</div>
+			</div>
+
+			<div style="text-align: center; margin-top: 30px;">
+				<span> <a href="#"
+					style="font-size: 10px;color: #222222; margin-left:auto; margin-right: auto; width: 150px; margin-right: 20px;"
+					data-role="button" class="ui-btn-inline" data-theme="d" data-rel="back" lang.key="common.cancel" lang.child="class=ui-btn-inner;class=ui-btn-text">Cancel</a>
+				</span> <span> <a href="#"
+					style="font-size: 10px;color: #BBBBBB; margin-left:auto; margin-right: auto; width: 150px;"
+					data-role="button" class="ui-btn-inline" data-theme="b" id="apSetupSaveBtn" lang.key="common.save" lang.child="class=ui-btn-inner;class=ui-btn-text">Save</a> </span>
+			</div>
+
+		</div>
+	</div>
+
+	<div id="systemInfoPage" data-role="page" >
+		<div id="systemInfoContent" data-role="content" class="content" style="background-color: #888888; min-height: 610px; color: #FFFFFF;">
+			<div style="width: 60%; margin-top: 60px; margin-left: auto; margin-right: auto; text-align: center;">
+				<div style="text-align: left;">
+					<span><label id="videoProtectTitle">Video Preemptive Protect Status</label>:&nbsp;&nbsp;<label id="videoProtectResult">&nbsp;</label></span>
+				</div>
+				<div style="text-align: center; margin-top: 30px;">
+					<span> <a href="#"
+					style="font-size: 10px;color: #BBBBBB; margin-left:auto; margin-right: auto; width: 150px;"
+					data-role="button" class="ui-btn-inline" data-theme="b" id="videoProtectSwitchBtn" lang.key="common.switch" lang.child="class=ui-btn-inner;class=ui-btn-text">Switch</a>
+					</span>
+				</div>
+			</div>
+			<div>
+				<hr>
+			</div>
+			<div style="width: 60%; margin-top: 60px; margin-left: auto; margin-right: auto; text-align: center;">
+				<div style="text-align: left;">
+					<label for="deviceNameInput" id="deviceNameSpan">Device Name</label>
+				</div>
+				<div>
+					<input id="deviceNameInput" index="0" value="" style="text-align: center;">
+				</div>
+			</div>
+			<div style="width: 60%; margin-top: 10px; margin-left: auto; margin-right: auto; text-align: center;">
+				<div style="text-align: left;">
+					<label for="sysLangSelect" id="sysLangSpan">Language</label>
+				</div>
+				<div>
+					<select id="sysLangSelect" index="0" data-native-menu="true" style="display: inline-block;">
+					</select>
+				</div> 
+			</div>
+			<div style="text-align: center; margin-top: 30px;">
+				<span> <a href="#"
+					style="font-size: 10px;color: #222222; margin-left:auto; margin-right: auto; width: 150px; margin-right: 20px;"
+					data-role="button" class="ui-btn-inline" data-theme="d" data-rel="back" lang.key="common.cancel" lang.child="class=ui-btn-inner;class=ui-btn-text">Cancel</a>
+				</span> <span> <a href="#"
+					style="font-size: 10px;color: #BBBBBB; margin-left:auto; margin-right: auto; width: 150px;"
+					data-role="button" class="ui-btn-inline" data-theme="b" id="systemInfoSaveBtn" lang.key="common.save" lang.child="class=ui-btn-inner;class=ui-btn-text">Save</a>
+				</span>
+			</div>
+		</div>
+	</div>
+	
+	<div id="restoreDefaultPage" data-role="page">
+		<div id="restoreDefaultContent" data-role="content" class="content" style="background-color: #888888; min-height: 610px; color: #FFFFFF;">
+			<div style="margin-top: 60px;text-align: center; margin-bottom: 30px; font-size: 20px;">
+				<label lang.key="status.restore">Restore Default Settings</label>
+			</div>
+			<div style="width: 80%; margin-left: auto; margin-right: auto;">
+				<span lang.key="status.restore.warning">
+					Warning: this action will restore all current settings of the device to default values. It cannot be undone.
+				</span>
+			</div>
+			<div style="text-align: center; margin-top: 30px;">
+				<span> <a href="#"
+					style="font-size: 10px;color: #222222; margin-left:auto; margin-right: auto; width: 150px; margin-right: 20px;"
+					data-role="button" class="ui-btn-inline" data-theme="d" data-rel="back" lang.key="common.cancel" lang.child="class=ui-btn-inner;class=ui-btn-text">Cancel</a>
+				</span> <span> <a href="#"
+					style="font-size: 10px;color: #BBBBBB; margin-left:auto; margin-right: auto; width: 150px;"
+					data-role="button" class="ui-btn-inline" data-theme="b" id="restoreFactoryBtn" lang.key="common.restore" lang.child="class=ui-btn-inner;class=ui-btn-text">Restore</a>
+				</span>
+			</div>
+		</div>
+	</div>
+	
+	<div id="uploadUpgradePage" data-role="page" >
+		<div id="onlineUpgradeContent" data-role="content" class="content" style="background-color: #888888; min-height: 610px; color: #FFFFFF;">
+			<div style="margin-top: 60px;text-align: center; margin-bottom: 30px; font-size: 20px;">
+				<label lang.key="status.upgrade.online">Online Upgrade</label>
+			</div>
+			<div style="text-align: center; margin-top: 30px; margin-bottom: 30px;">
+				<span> <a href="#"
+					style="font-size: 10px;color: #222222; margin-left:auto; margin-right: auto; width: 250px;"
+					data-role="button" class="ui-btn-inline" data-theme="d" id="onlineUpgradeBtn" lang.key="status.upgrade.confirm" lang.child="class=ui-btn-inner;class=ui-btn-text">Upgrade</a>
+				</span>
+			</div>
+			<div>
+				<hr>
+			</div>
+			<div style="margin-top: 60px;text-align: center; margin-bottom: 30px; font-size: 20px;">
+				<label lang.key="status.upgrade.upload">Upload Upgrade</label>
+			</div>
+			<div style="width: 80%; margin-left: auto; margin-right: auto;">
+				<span lang.key="status.upgrade.message">
+					Notice: please make sure that the firmware image file supports current device type. DO NOT manually shutdown or reboot device during upgrading.
+				</span>
+			</div>
+			<div style="width: 60%; margin-left: auto; margin-right: auto;">
+				<form id="onlineup_upform" action="/cgi-bin/web.cgi" target="uploadFrame" method="post" enctype="multipart/form-data">
+					<input id="firmFile" type="file" name="firmFile" style="font-size: 14px;" />
+				</form>
+			</div>
+			<div style="display:none">
+				<iframe id="uploadFrame" name="uploadFrame"></iframe>
+			</div>
+			<div style="text-align: center; margin-top: 30px;">
+				<span> <a href="#"
+					style="font-size: 10px;color: #222222; margin-left:auto; margin-right: auto; width: 150px; margin-right: 20px;"
+					data-role="button" class="ui-btn-inline" data-theme="d" data-rel="back" lang.key="common.cancel" lang.child="class=ui-btn-inner;class=ui-btn-text">Cancel</a>
+				</span> <span> <a href="#"
+					style="font-size: 10px;color: #BBBBBB; margin-left:auto; margin-right: auto; width: 150px;"
+					data-role="button" class="ui-btn-inline" data-theme="b" id="uploadUpgradeBtn" lang.key="status.upgrade.confirm.upload" lang.child="class=ui-btn-inner;class=ui-btn-text">Upload</a>
+				</span>
+			</div>
+		</div>
+	</div>
+
+	<div id="authSettingsPage" data-role="page">
+		<div id="authSettingsContent" data-role="content" class="content"
+			style="background-color: #888888; min-height: 610px; color: #FFFFFF;">
+			<div
+				style="width: 80%; max-width:500px; margin-left: auto; margin-right: auto; margin-top: 10px;">
+				<div style="margin-top: 60px;"></div>
+				<div style="margin-bottom: 10px;">
+					<div style="width: 50%; float: left;">
+						<label for="passProtectSelect" id="passProtectSpan"
+							style="margin-top: 10px;">Password Protect:</label>
+					</div>
+					<div style="float: left;">
+						<select id="passProtectSelect" index="1" data-role="slider"
+							data-theme="a" data-native-menu="true">
+							<option value="0" lang.key="common.off">Off</option>
+							<option value="1" lang.key="common.on">On</option>
+						</select>
+					</div>
+					<div style="clear: both"></div>
+				</div>
+				<div>
+					<div>
+						<span style="display:inline-block;width:30%"><label
+							for="sysUsername" lang.key="login.username">Username:</label>
+						</span> <span> <input id="sysUsername"
+							style="display:inline; width:65%; text-align: center" /> </span>
+					</div>
+					<div>
+						<span style="display:inline-block;width:30%"><label
+							for="sysPassword" lang.key="login.password">Password:</label>
+						</span> <span> <input id="sysPassword" type="password"
+							style="display:inline; width:65%; text-align: center" /> </span>
+					</div>
+				</div>
+			</div>
+
+			<div style="text-align: center; margin-top: 30px;">
+				<span> <a href="#"
+					style="font-size: 10px;color: #222222; margin-left:auto; margin-right: auto; width: 150px; margin-right: 20px;"
+					data-role="button" class="ui-btn-inline" data-theme="d" data-rel="back" lang.key="common.cancel" lang.child="class=ui-btn-inner;class=ui-btn-text">Cancel</a>
+				</span> <span> <a href="#"
+					style="font-size: 10px;color: #BBBBBB; margin-left:auto; margin-right: auto; width: 150px;"
+					data-role="button" class="ui-btn-inline" data-theme="b" class="saveBtn" id="authSaveBtn" lang.key="common.save" lang.child="class=ui-btn-inner;class=ui-btn-text">Save</a> </span>
+			</div>
+
+		</div>
+	</div>
+
+	<div id="videoSetupPage" data-role="page">
+		<div id="videoSetupContent" data-role="content" class="content"
+			style="background-color: #888888; min-height: 610px; color: #FFFFFF;">
+				<div style="margin-top: 60px;">
+					&nbsp;
+				</div>
+
+				<div style="width: 80%; max-width:500px; margin-left: auto; margin-right: auto;">
+					<span style="display:inline-block; width:100%">
+						<label lang.key="common.ratio">Aspect Ratio</label>
+					</span>
+					<span>
+						<select id="aspectRatioSelect" index="0" data-native-menu="true" onchange="setRatioInfo('aspectRatioSelect')">
+						</select>
+					</span>
+				</div>
+				<!--<div style="width: 80%; max-width:500px; margin-left: auto; margin-right: auto;"><span style="display:inline-block;width:100%"> <label
+						for="aspactRatioSelect" id="aspactRatioSpan">Aspect Ratio:</label>
+				</span> <span> <select id="aspactRatioSelect" index="0"
+						data-native-menu="true">
+					</select> </span></div>
+
+				<div style="width: 80%; max-width:500px; margin-left: auto; margin-right: auto;"><span style="display:inline-block;width:100%"> <label
+						for="tvSystemSelect" id="tvSystemSpan">TV System:</label> </span> <span>
+						<select id="tvSystemSelect" index="1" data-native-menu="true">
+					</select> </span></div>
+				
+				<div  style="width: 80%; max-width:500px; margin-left: auto; margin-right: auto;">
+					<div style="width: 50%; float: left;">
+						<label for="scaleVideoSelect" id="scaleVideoSpan" style="margin-top: 10px;">Scale Output to 90%:</label>
+					</div>
+					<div style="float: left;">
+						<select id="scaleVideoSelect" index="2" data-role="slider"
+							data-theme="a" data-native-menu="true">
+							<option value="[OFF]" lang.key="common.off">Off</option>
+							<option value="[ON]" lang.key="common.on">On</option>
+						</select>
+					</div>
+					<div style="clear: both"></div>
+				</div>
+				
+				<div  style="width: 80%; max-width:500px; margin-left: auto; margin-right: auto;">
+					<div style="width: 50%; float: left;">
+						<label for="videoFullSelect" id="videoFullSpan" style="margin-top: 10px;">Video Full Screen:</label>
+					</div>
+					<div style="float: left;">
+						<select id="videoFullSelect" index="3" data-role="slider"
+							data-theme="a" data-native-menu="true">
+							<option value="[OFF]" lang.key="common.off">Off</option>
+							<option value="[ON]" lang.key="common.on">On</option>
+						</select>
+					</div>
+					<div style="clear: both"></div>
+				</div>
+
+				<div style="text-align: center; margin-top: 30px;">
+					<span> <a href="#"
+						style="font-size: 10px;color: #222222; margin-left:auto; margin-right: auto; width: 150px; margin-right: 20px;"
+						data-role="button" class="ui-btn-inline" data-theme="d" data-rel="back" lang.key="common.cancel" lang.child="class=ui-btn-inner;class=ui-btn-text">Cancel</a>
+					</span> <span> <a href="#"
+						style="font-size: 10px;color: #BBBBBB; margin-left:auto; margin-right: auto; width: 150px;"
+						data-role="button" class="ui-btn-inline" data-theme="b" id="videoSetupSaveBtn" lang.key="common.save" lang.child="class=ui-btn-inner;class=ui-btn-text">Save</a> </span>
+				</div>-->
+		</div>
+	</div>
+	
+	<div id="audioSetupPage" data-role="page">
+		<div id="audioSetupContent" data-role="content" class="content"
+			style="background-color: #888888; min-height: 610px; color: #FFFFFF;">
+				<div style="margin-top: 60px;">
+					&nbsp;
+				</div>
+				<div style="width: 80%; max-width:500px; margin-left: auto; margin-right: auto;"><span style="display:inline-block;width:100%"> <label
+						for="aspactRatioSelect" id="hdmiOutputSpan">HDMI Output:</label>
+				</span> <span> <select id="hdmiOutputSelect" index="1"
+						data-native-menu="true">
+					</select> </span></div>
+
+				<div style="width: 80%; max-width:500px; margin-left: auto; margin-right: auto;"><span style="display:inline-block;width:100%"> <label
+						for="" id="">Surround Sound:</label> </span> <span> <select id="" index=""
+						data-native-menu="true">
+					</select> </span></div>
+				
+				<div style="text-align: center; margin-top: 30px;">
+					<span> <a href="#"
+						style="font-size: 10px;color: #222222; margin-left:auto; margin-right: auto; width: 150px; margin-right: 20px;"
+						data-role="button" class="ui-btn-inline" data-theme="d" data-rel="back" lang.key="common.cancel" lang.child="class=ui-btn-inner;class=ui-btn-text">Cancel</a>
+					</span> <span> <a href="#"
+						style="font-size: 10px;color: #BBBBBB; margin-left:auto; margin-right: auto; width: 150px;"
+						data-role="button" class="ui-btn-inline" data-theme="b" id="audioSetupSaveBtn" lang.key="common.save" lang.child="class=ui-btn-inner;class=ui-btn-text">Save</a> </span>
+				</div>
+		</div>
+	</div>
+
+	<div id="waitingPage" data-role="page" data-theme="a">
+		<div id="waitingContent" data-role="content" class="content"
+			style="text-align: center;margin-top: 80px;">
+			<div id="waitingParag" style="line-height: 20px;">
+				<p style="font-size: 20px; font-family: Courier;">&nbsp;</p>
+				<p>
+					<img src="css/images/ajax-loader.gif" />
+				</p>
+				<p id="waitingMessage" lang.key="common.waiting">
+					Please wait...
+				</p>
+			</div>
+		</div>
+	</div>
+	
+	<div id="connectApPage" data-role="page">
+		<div id="connectApContent" data-role="content" class="content"
+			style="background-color: #AAAAAA; color: #000000;">
+			<div
+				style="width: 80%; max-width:500px; margin-left: auto; margin-right: auto; margin-top: 10px;">
+				<div style="margin-top: 60px;"></div>
+				<div>
+					<div>
+						<span style="display:inline-block;"><label
+							for="apPassword" lang.key="login.password">Password:</label>
+						</span> <span> <input id="apPassword" type="password"
+							style="display:inline; text-align: center" /> </span>
+					</div>
+				</div>
+			</div>
+			
+			<div style="margin-top: 30px;">
+				<a id="connetApLink" href="#"
+					style="font-size: 10px;color: #BBBBBB; margin-left:auto; margin-right: auto; width: 150px;"
+					data-role="button" class="ui-btn-block" data-theme="b" lang.key="network.connect" lang.child="class=ui-btn-inner;class=ui-btn-text">Connect</a>
+			</div>
+			
+			<div style="text-align: center; margin-top: 10px;">
+				<a href="#"
+					style="font-size: 10px;color: #222222; margin-left:auto; margin-right: auto; width: 150px;"
+					data-role="button" class="ui-btn-block" data-theme="d" data-rel="back" lang.key="common.cancel" lang.child="class=ui-btn-inner;class=ui-btn-text">Cancel</a>
+			</div>
+
+		</div>
+	</div>
+
+</body>
+</html>
